@@ -7,6 +7,47 @@ import { supabase } from "@/lib/supabase/client";
 const TASK_ICONS = ["📚", "🧹", "🍽️", "🛁", "🐕", "🌱", "💪", "🎵", "🏃", "🧘", "🍱", "🛏️", "♻️", "🖊️"];
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
+interface TaskTemplate {
+  icon: string;
+  title: string;
+  description: string;
+  coinsReward: number;
+  taskType: "once" | "daily" | "weekly";
+  recurDays?: number[];
+  category: string;
+}
+
+const TASK_TEMPLATES: TaskTemplate[] = [
+  // 居家整潔
+  { category: "居家整潔", icon: "🛏️", title: "整理床舖", description: "起床後把棉被和枕頭整理好", coinsReward: 5, taskType: "daily" },
+  { category: "居家整潔", icon: "🧹", title: "掃地", description: "用掃把或吸塵器把地板清掃乾淨", coinsReward: 10, taskType: "daily" },
+  { category: "居家整潔", icon: "🧹", title: "拖地", description: "用拖把把地板拖乾淨", coinsReward: 10, taskType: "weekly", recurDays: [3, 6] },
+  { category: "居家整潔", icon: "🍽️", title: "洗碗", description: "餐後把碗盤洗乾淨並放回原位", coinsReward: 8, taskType: "daily" },
+  { category: "居家整潔", icon: "🍽️", title: "擺餐桌", description: "用餐前把餐具擺好", coinsReward: 5, taskType: "daily" },
+  { category: "居家整潔", icon: "🛁", title: "洗澡不催", description: "自己主動去洗澡，不需要大人提醒", coinsReward: 5, taskType: "daily" },
+  { category: "居家整潔", icon: "♻️", title: "倒垃圾", description: "把垃圾袋綁好拿去丟", coinsReward: 8, taskType: "weekly", recurDays: [2, 5] },
+  { category: "居家整潔", icon: "🌱", title: "澆花", description: "幫家裡的植物澆水", coinsReward: 5, taskType: "daily" },
+
+  // 學習任務
+  { category: "學習成長", icon: "📚", title: "完成作業", description: "把今天學校的作業全部完成", coinsReward: 15, taskType: "daily" },
+  { category: "學習成長", icon: "📚", title: "複習功課", description: "花 20 分鐘複習今天學的內容", coinsReward: 10, taskType: "daily" },
+  { category: "學習成長", icon: "🖊️", title: "練習寫字", description: "練習寫字帖或注音符號", coinsReward: 8, taskType: "daily" },
+  { category: "學習成長", icon: "📚", title: "閱讀課外書", description: "閱讀課外書 15 分鐘以上", coinsReward: 10, taskType: "daily" },
+  { category: "學習成長", icon: "🎵", title: "練習樂器", description: "練習樂器 20 分鐘", coinsReward: 15, taskType: "daily" },
+
+  // 健康習慣
+  { category: "健康習慣", icon: "💪", title: "運動", description: "進行跑步、跳繩或其他運動 20 分鐘", coinsReward: 10, taskType: "daily" },
+  { category: "健康習慣", icon: "🧘", title: "早睡", description: "在約定時間前準備好去睡覺", coinsReward: 10, taskType: "daily" },
+  { category: "健康習慣", icon: "🏃", title: "晨跑", description: "早起到外面慢跑或快走", coinsReward: 15, taskType: "weekly", recurDays: [1, 3, 5] },
+
+  // 寵物與家庭
+  { category: "家庭互動", icon: "🐕", title: "餵寵物", description: "準時幫寵物補充飼料和水", coinsReward: 8, taskType: "daily" },
+  { category: "家庭互動", icon: "🐕", title: "帶狗散步", description: "帶家裡的狗出去散步", coinsReward: 10, taskType: "daily" },
+  { category: "家庭互動", icon: "🍱", title: "幫忙準備午/晚餐", description: "協助大人備餐、洗菜或擺盤", coinsReward: 12, taskType: "once" },
+];
+
+const TEMPLATE_CATEGORIES = Array.from(new Set(TASK_TEMPLATES.map((t) => t.category)));
+
 interface Child { id: string; name: string; avatar: string; }
 interface Task {
   id: string;
@@ -22,7 +63,7 @@ interface Task {
   assigned_to: string | null;
 }
 
-type Modal = { type: "add" } | { type: "edit"; task: Task } | null;
+type Modal = { type: "add"; template?: TaskTemplate } | { type: "edit"; task: Task } | { type: "templates" } | null;
 
 export default function TasksPage() {
   const router = useRouter();
@@ -84,9 +125,14 @@ export default function TasksPage() {
           <h1 className="text-2xl font-bold">任務管理 📋</h1>
           <p className="text-sm text-slate-400">{tasks.filter((t) => t.status === "active").length} 個進行中任務</p>
         </div>
-        <button onClick={() => setModal({ type: "add" })} className="btn-primary px-4 py-2 text-sm">
-          + 新增任務
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setModal({ type: "templates" })} className="rounded-xl border border-white/10 bg-space-700 px-3 py-2 text-sm hover:bg-space-600">
+            📋 模板
+          </button>
+          <button onClick={() => setModal({ type: "add" })} className="btn-primary px-4 py-2 text-sm">
+            + 新增
+          </button>
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -147,11 +193,18 @@ export default function TasksPage() {
         })}
       </div>
 
+      {modal?.type === "templates" && (
+        <TemplateModal
+          onSelect={(tpl) => setModal({ type: "add", template: tpl })}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal?.type === "add" && familyId && userId && (
         <TaskFormModal
           cadets={cadets}
           familyId={familyId}
           userId={userId}
+          template={modal.template}
           onClose={() => setModal(null)}
           onDone={load}
         />
@@ -178,25 +231,72 @@ function TypeBadge({ type, recurDays }: { type: string; recurDays: number[] | nu
   return null;
 }
 
+function TemplateModal({ onSelect, onClose }: { onSelect: (t: TaskTemplate) => void; onClose: () => void }) {
+  const [activeCategory, setActiveCategory] = useState(TEMPLATE_CATEGORIES[0]);
+  const filtered = TASK_TEMPLATES.filter((t) => t.category === activeCategory);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-md overflow-y-auto max-h-[90dvh] rounded-t-3xl bg-space-800 p-6 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-1 text-lg font-bold">📋 任務模板庫</h2>
+        <p className="mb-4 text-sm text-slate-400">選擇模板後可再調整內容</p>
+
+        {/* Category tabs */}
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          {TEMPLATE_CATEGORIES.map((cat) => (
+            <button key={cat} onClick={() => setActiveCategory(cat)}
+              className={`shrink-0 rounded-xl px-3 py-1.5 text-xs transition ${activeCategory === cat ? "bg-nebula-purple text-white" : "bg-space-700 text-slate-400"}`}>
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {filtered.map((tpl, i) => (
+            <button key={i} onClick={() => { onSelect(tpl); }}
+              className="card flex items-center gap-3 text-left hover:border-nebula-purple/40 transition">
+              <span className="text-2xl">{tpl.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm">{tpl.title}</p>
+                <p className="text-xs text-slate-400 line-clamp-1">{tpl.description}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-xs font-bold text-stardust">{tpl.coinsReward} ⭐</p>
+                <p className="text-xs text-slate-500">
+                  {tpl.taskType === "once" ? "一次性" : tpl.taskType === "daily" ? "每日" : "每週"}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <button onClick={onClose} className="mt-4 w-full rounded-xl border border-white/10 py-3 text-sm">取消</button>
+      </div>
+    </div>
+  );
+}
+
 interface TaskFormProps {
   cadets: Child[];
   task?: Task;
+  template?: TaskTemplate;
   familyId?: string;
   userId?: string;
   onClose: () => void;
   onDone: () => void;
 }
 
-function TaskFormModal({ cadets, task, familyId, userId, onClose, onDone }: TaskFormProps) {
+function TaskFormModal({ cadets, task, template, familyId, userId, onClose, onDone }: TaskFormProps) {
   const isEdit = !!task;
-  const [title, setTitle] = useState(task?.title ?? "");
-  const [description, setDescription] = useState(task?.description ?? "");
-  const [icon, setIcon] = useState(task?.icon ?? "📋");
-  const [coinsReward, setCoinsReward] = useState(task?.coins_reward ?? 5);
+  const [title, setTitle] = useState(task?.title ?? template?.title ?? "");
+  const [description, setDescription] = useState(task?.description ?? template?.description ?? "");
+  const [icon, setIcon] = useState(task?.icon ?? template?.icon ?? "📋");
+  const [coinsReward, setCoinsReward] = useState(task?.coins_reward ?? template?.coinsReward ?? 5);
   const [taskType, setTaskType] = useState<"once" | "daily" | "weekly">(
-    (task?.task_type as "once" | "daily" | "weekly") ?? "once"
+    (task?.task_type as "once" | "daily" | "weekly") ?? template?.taskType ?? "once"
   );
-  const [recurDays, setRecurDays] = useState<number[]>(task?.recur_days ?? []);
+  const [recurDays, setRecurDays] = useState<number[]>(task?.recur_days ?? template?.recurDays ?? []);
   const [resetHour, setResetHour] = useState(task?.reset_hour ?? 6);
   const [assignedTo, setAssignedTo] = useState<string>(task?.assigned_to ?? "");
   const [requireApproval, setRequireApproval] = useState(task?.require_approval ?? false);
