@@ -35,6 +35,13 @@ export default function Home() {
         </Link>
       </div>
 
+      <Link
+        href="/signup"
+        className="text-xs text-nebula-cyan underline underline-offset-2"
+      >
+        還沒有帳號？立即建立家庭 →
+      </Link>
+
       <p className="text-xs text-slate-500">v0.1 · 開發預覽</p>
     </main>
   );
