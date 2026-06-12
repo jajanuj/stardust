@@ -8,7 +8,7 @@ const NAV = [
   { href: "/cadet", label: "首頁", icon: "🏠", exact: true },
   { href: "/cadet/tasks", label: "任務", icon: "📋" },
   { href: "/cadet/shop", label: "商城", icon: "🛒" },
-  { href: "/cadet/wishlist", label: "心願", icon: "💫" },
+  { href: "/cadet/pet", label: "寵物", icon: "🐾" },
   { href: "/cadet/history", label: "歷程", icon: "📖" },
 ];
 

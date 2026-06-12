@@ -11,6 +11,7 @@ const NAV = [
   { href: "/commander/approvals", label: "待審核", icon: "✅" },
   { href: "/commander/rewards", label: "獎勵", icon: "🎁" },
   { href: "/commander/fulfill", label: "待兌現", icon: "🎯" },
+  { href: "/commander/messages", label: "留言", icon: "💬" },
 ];
 
 export default function CommanderLayout({ children }: { children: React.ReactNode }) {
