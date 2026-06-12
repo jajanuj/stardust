@@ -36,7 +36,13 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [kidCard, setKidCard] = useState<KidCard | null>(null);
-  const [signedUpUserId, setSignedUpUserId] = useState<string | null>(null);
+
+  function saveUserId(id: string) {
+    try { sessionStorage.setItem("_sd_signup_uid", id); } catch {}
+  }
+  function loadUserId(): string | null {
+    try { return sessionStorage.getItem("_sd_signup_uid"); } catch { return null; }
+  }
 
   async function handleAccount(e: React.FormEvent) {
     e.preventDefault();
@@ -47,8 +53,8 @@ export default function SignupPage() {
     const { data, error: signUpErr } = await supabase.auth.signUp({ email, password });
     setLoading(false);
     if (signUpErr) { setError(signUpErr.message); return; }
-    // 儲存 user id，避免 email 確認設定導致後續 getUser() 拿不到 session
-    setSignedUpUserId(data.user?.id ?? null);
+    // 儲存至 sessionStorage，防止 email 確認/頁面重整造成 session 消失
+    if (data.user?.id) saveUserId(data.user.id);
     setStep("family");
   }
 
@@ -66,8 +72,8 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
 
-    // 優先用 signUp 時存下的 id；若已有 session 也可從 getUser() 取得
-    let userId = signedUpUserId;
+    // 依序嘗試：sessionStorage → Supabase session
+    let userId: string | null = loadUserId();
     if (!userId) {
       const { data: { user } } = await supabase.auth.getUser();
       userId = user?.id ?? null;
@@ -94,6 +100,7 @@ export default function SignupPage() {
     }
 
     const data = await res.json();
+    try { sessionStorage.removeItem("_sd_signup_uid"); } catch {}
     setKidCard({
       name: data.child.name,
       avatar: data.child.avatar,
