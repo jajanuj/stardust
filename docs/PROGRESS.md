@@ -17,7 +17,7 @@
 | Phase 1 | MVP 核心（Onboarding、學員/任務管理、任務列表、待審核、Cron） | ✅ 完成 |
 | Phase 2 | 商城與獎勵（商城、兌換、待兌現、心願清單、計時器、流水帳） | ✅ 完成 |
 | Phase 3 | 遊戲化與體驗優化（寵物、成就、留言、PWA） | ✅ 完成 |
-| Phase 4 | 進階功能（Push 訂閱、星塵調整、排行榜、歷史） | ✅ 完成 |
+| Phase 4 | 進階功能（Push 訂閱、星塵調整、排行榜、歷史、模板庫、統計、匯出） | ✅ 完成 |
 
 圖例：✅ 完成 ・ 🔄 進行中 ・ ⏳ 未開始 ・ ⛔ 受阻
 
@@ -96,11 +96,11 @@
 - [x] Web Push 訂閱管理（`/api/push/subscribe` POST/DELETE）
 - [x] 手動調整星塵（`/api/children/adjust-coins`：呼叫 RPC）
 
-**Phase 4 剩餘（較低優先）**
-- [ ] 任務模板庫（`/commander/tasks` 套用模板按鈕）
-- [ ] 週/月統計報表
-- [ ] 資料匯出 / 備份
-- [ ] 多語系支援
+**Phase 4 追加功能（全部完成）**
+- [x] 任務模板庫（`/commander/tasks` 模板按鈕，20 個內建任務）
+- [x] 週/月統計報表（`/commander/stats`：每日趨勢圖、學員排行）
+- [x] 資料匯出 / 備份（`/api/export` JSON 完整備份 + CSV 流水帳）
+- [ ] 多語系支援（低優先，視實際需求）
 
 ---
 
@@ -118,6 +118,7 @@
 | `/commander/messages` | ✅ 留言板 |
 | `/commander/history` | ✅ 歷史紀錄 |
 | `/commander/leaderboard` | ✅ 排行榜 |
+| `/commander/stats` | ✅ 統計報表（週/月趨勢圖） |
 
 ### 學員 `/cadet/*`
 | 路由 | 狀態 |
@@ -165,6 +166,7 @@
 | `/api/messages` | 發送/刪除指揮官留言 | ✅ |
 | `/api/children/adjust-coins` | 手動調整星塵 RPC | ✅ |
 | `/api/push/subscribe` | Web Push 訂閱管理 | ✅ |
+| `/api/export` | 資料匯出（JSON/CSV） | ✅ |
 
 ---
 
@@ -180,7 +182,8 @@
 | phase2.spec.ts | 9 | ✅ |
 | phase3.spec.ts | 8 | ✅ |
 | phase4.spec.ts | 6 | ✅ |
-| **合計** | **50** | **✅ 50/50** |
+| templates.spec.ts | 3 | ✅ |
+| **合計** | **53** | **✅ 53/53** |
 
 ---
 
@@ -209,3 +212,6 @@
 | 2026-06-12 | Phase 2 商城與獎勵系統：獎勵設定/商城/兌換/待兌現/心願清單/計時器/流水帳（9/9 通過） |
 | 2026-06-12 | Phase 3 遊戲化與 PWA：寵物/成就/計時器/留言板/manifest/sw.js（8/8 通過） |
 | 2026-06-12 | Phase 4 進階功能：歷史紀錄/排行榜/Push訂閱/星塵調整，全 E2E 50/50 通過 |
+| 2026-06-12 | 任務模板庫：20 個內建任務，一鍵帶入表單 |
+| 2026-06-12 | 週/月統計報表：每日趨勢圖、學員排行、4 個指標 |
+| 2026-06-12 | 資料匯出/備份：JSON 完整備份 + CSV 流水帳，全 E2E 53/53 通過 |
