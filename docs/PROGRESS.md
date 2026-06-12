@@ -50,9 +50,9 @@
 
 ---
 
-## Phase 1 — MVP 核心 ⏳
+## Phase 1 — MVP 核心 🔄
 
-- [ ] Onboarding:`/signup` 註冊 → 建家庭 → 新增第一位學員 → 產生 KID 登入卡(需 service role server route)
+- [x] Onboarding:`/signup` 四步驟流程（帳號→家庭→學員→KID登入卡）+ `/api/onboarding` server route + Playwright E2E 5 tests 通過
 - [ ] 指揮官:學員管理(新增/編輯/停用、產生 KID、重設 PIN)
 - [ ] 指揮官:任務管理(一次性/每日/週期、審核開關)
 - [ ] 學員:任務列表(以 completion_date 判定完成狀態)
@@ -103,3 +103,4 @@
 | 2026-06-12 | 計畫文件 v0.3 → v0.5(架構審查補強、學員驗證方案定案) |
 | 2026-06-12 | Phase 0 完成:專案骨架 + DB migration(schema/RPC/RLS)+ 學員/指揮官登入 + 完成/兌換 API |
 | 2026-06-12 | 文件結構整理:plan 與 progress 移入 `docs/`,新增本進度檔 |
+| 2026-06-12 | Phase 1 Onboarding:`/signup` 多步驟流程 + `/api/onboarding` + Playwright E2E（5/5 通過） |
