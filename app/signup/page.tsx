@@ -101,7 +101,8 @@ export default function SignupPage() {
 
     setLoading(false);
     if (!res.ok) {
-      const body = await res.json();
+      const body = await res.json().catch(() => ({}));
+      console.error("[signup] onboarding failed:", res.status, body);
       setError(body.error ?? "建立失敗，請再試一次");
       return;
     }

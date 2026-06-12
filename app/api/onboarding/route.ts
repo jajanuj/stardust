@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     .single();
 
   if (familyErr || !family) {
-    return NextResponse.json({ error: "建立家庭失敗" }, { status: 500 });
+    console.error("[onboarding] familyErr:", familyErr);
+    return NextResponse.json({ error: `建立家庭失敗: ${familyErr?.message ?? "unknown"}` }, { status: 500 });
   }
 
   // 2. 建立家庭成員（指揮官）
@@ -69,7 +70,8 @@ export async function POST(req: Request) {
     .single();
 
   if (childErr || !child) {
-    return NextResponse.json({ error: "建立學員失敗" }, { status: 500 });
+    console.error("[onboarding] childErr:", childErr);
+    return NextResponse.json({ error: `建立學員失敗: ${childErr?.message ?? "unknown"}` }, { status: 500 });
   }
 
   return NextResponse.json({
