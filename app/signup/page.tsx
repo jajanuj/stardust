@@ -36,6 +36,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [kidCard, setKidCard] = useState<KidCard | null>(null);
+  const [signedUpUserId, setSignedUpUserId] = useState<string | null>(null);
 
   async function handleAccount(e: React.FormEvent) {
     e.preventDefault();
@@ -43,9 +44,11 @@ export default function SignupPage() {
     if (password !== password2) { setError("兩次密碼不一致"); return; }
     if (password.length < 6) { setError("密碼至少 6 個字元"); return; }
     setLoading(true);
-    const { error: signUpErr } = await supabase.auth.signUp({ email, password });
+    const { data, error: signUpErr } = await supabase.auth.signUp({ email, password });
     setLoading(false);
     if (signUpErr) { setError(signUpErr.message); return; }
+    // 儲存 user id，避免 email 確認設定導致後續 getUser() 拿不到 session
+    setSignedUpUserId(data.user?.id ?? null);
     setStep("family");
   }
 
@@ -63,14 +66,19 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setError("登入狀態遺失，請重新整理"); setLoading(false); return; }
+    // 優先用 signUp 時存下的 id；若已有 session 也可從 getUser() 取得
+    let userId = signedUpUserId;
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    }
+    if (!userId) { setError("登入狀態遺失，請重新整理"); setLoading(false); return; }
 
     const res = await fetch("/api/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: user.id,
+        userId,
         familyName: familyName.trim(),
         cadetName: cadetName.trim(),
         cadetAvatar,
