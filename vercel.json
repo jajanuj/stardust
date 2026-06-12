@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/tasks/daily-reset",
+      "schedule": "0 22 * * *"
+    }
+  ]
+}
