@@ -92,6 +92,62 @@ export default function CommanderHome() {
           </div>
           <span className="ml-auto text-slate-600">›</span>
         </Link>
+        <Link href="/commander/stats" className="card flex items-center gap-4 hover:border-nebula-purple/40 transition">
+          <span className="text-3xl">📊</span>
+          <div>
+            <p className="font-semibold">統計報表</p>
+            <p className="text-xs text-slate-400">近 7/30 天星塵活動趨勢</p>
+          </div>
+          <span className="ml-auto text-slate-600">›</span>
+        </Link>
+        <ExportCard />
+      </div>
+    </div>
+  );
+}
+
+function ExportCard() {
+  const [exporting, setExporting] = useState(false);
+
+  async function doExport(format: "json" | "csv") {
+    setExporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
+      const res = await fetch(`/api/export?format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { alert("匯出失敗，請稍後再試"); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `starduty-export-${new Date().toISOString().slice(0, 10)}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <div className="flex items-center gap-4 mb-3">
+        <span className="text-3xl">💾</span>
+        <div>
+          <p className="font-semibold">資料匯出</p>
+          <p className="text-xs text-slate-400">備份家庭所有紀錄</p>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => doExport("json")} disabled={exporting}
+          className="flex-1 rounded-xl border border-white/10 py-2 text-xs text-slate-300 hover:bg-space-700 transition">
+          {exporting ? "匯出中…" : "JSON 完整備份"}
+        </button>
+        <button onClick={() => doExport("csv")} disabled={exporting}
+          className="flex-1 rounded-xl border border-white/10 py-2 text-xs text-slate-300 hover:bg-space-700 transition">
+          CSV 流水帳
+        </button>
       </div>
     </div>
   );
