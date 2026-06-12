@@ -52,7 +52,14 @@ export default function SignupPage() {
     setLoading(true);
     const { data, error: signUpErr } = await supabase.auth.signUp({ email, password });
     setLoading(false);
-    if (signUpErr) { setError(signUpErr.message); return; }
+    if (signUpErr) {
+      if (signUpErr.message.includes("rate limit") || signUpErr.status === 429) {
+        setError("Email 發送次數過多，請等 10 分鐘後再試，或至 Supabase 關閉 Email 確認功能");
+      } else {
+        setError(signUpErr.message);
+      }
+      return;
+    }
     // 儲存至 sessionStorage，防止 email 確認/頁面重整造成 session 消失
     if (data.user?.id) saveUserId(data.user.id);
     setStep("family");
