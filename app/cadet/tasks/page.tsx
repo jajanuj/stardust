@@ -43,6 +43,7 @@ export default function CadetTasksPage() {
     const info = getCadetInfo();
     const cid = info?.id ?? "";
     setChildId(cid);
+    // 先用 localStorage 快速顯示，API 回傳後再更新為正確值
     setCoins(info?.coins ?? 0);
 
     // 透過 API Route（admin client），帶 JWT 取任務
@@ -53,6 +54,12 @@ export default function CadetTasksPage() {
 
     const body = await res.json();
     setTasks(body.tasks ?? []);
+    // 用 DB 的即時餘額覆蓋快取，並同步更新 localStorage
+    if (typeof body.coins === "number") {
+      setCoins(body.coins);
+      const latestInfo = getCadetInfo();
+      if (latestInfo) saveCadetSession(token, { ...latestInfo, coins: body.coins });
+    }
     setLoading(false);
   }, [router]);
 

@@ -11,14 +11,17 @@ export async function GET(req: NextRequest) {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: tasks, error } = await admin
-    .from("tasks")
-    .select(`id, title, description, icon, coins_reward, task_type, recur_days, reset_hour, require_approval, status,
-      task_completions!left(id, status, completion_date, child_id)`)
-    .eq("family_id", familyId)
-    .eq("status", "active")
-    .or(`assigned_to.eq.${childId},assigned_to.is.null`)
-    .order("created_at");
+  const [{ data: child }, { data: tasks, error }] = await Promise.all([
+    admin.from("children").select("coins").eq("id", childId).single(),
+    admin
+      .from("tasks")
+      .select(`id, title, description, icon, coins_reward, task_type, recur_days, reset_hour, require_approval, status,
+        task_completions!left(id, status, completion_date, child_id)`)
+      .eq("family_id", familyId)
+      .eq("status", "active")
+      .or(`assigned_to.eq.${childId},assigned_to.is.null`)
+      .order("created_at"),
+  ]);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -29,5 +32,5 @@ export async function GET(req: NextRequest) {
       .filter((c: { child_id: string }) => c.child_id === childId),
   }));
 
-  return NextResponse.json({ tasks: filtered, today });
+  return NextResponse.json({ tasks: filtered, today, coins: child?.coins ?? 0 });
 }
