@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
-import { getCadetToken, getCadetInfo } from "@/lib/cadetSession";
+import { getCadetToken, getCadetInfo, saveCadetSession } from "@/lib/cadetSession";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -82,11 +81,16 @@ export default function CadetTasksPage() {
 
   async function completeTask(taskId: string) {
     if (!childId || completing) return;
+    const token = getCadetToken();
+    if (!token) { router.replace("/login/cadet"); return; }
     setCompleting(taskId);
     const res = await fetch("/api/tasks/complete", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taskId, childId }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ taskId }),
     });
     setCompleting(null);
     if (!res.ok) {
@@ -100,6 +104,9 @@ export default function CadetTasksPage() {
       showToast("✅ 已回報！等待指揮官審核中…", "info");
     } else {
       setCoins(result.balance);
+      // 同步更新 localStorage 內的 coins
+      const info = getCadetInfo();
+      if (info) saveCadetSession(getCadetToken()!, { ...info, coins: result.balance });
       showToast(`🌟 +${tasks.find((t) => t.id === taskId)?.coins_reward ?? ""} 星塵！`, "success");
     }
     load();
