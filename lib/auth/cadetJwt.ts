@@ -17,6 +17,8 @@ export async function signCadetJwt({ childId, familyId }: CadetClaims): Promise<
     user_metadata: { kind: "cadet", child_id: childId, family_id: familyId },
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setAudience("authenticated")   // Supabase RLS 必須的 aud claim
+    .setIssuer("supabase")          // 標準 Supabase JWT issuer
     .setSubject(childId)
     .setIssuedAt()
     .setExpirationTime(CADET_TTL)
