@@ -30,6 +30,9 @@ export default function RewardsPage() {
   const [filter, setFilter] = useState<"active" | "inactive">("active");
 
   const load = useCallback(async () => {
+    // getUser() triggers token refresh; getSession() then returns the fresh token
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.replace("/login/commander"); return; }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { router.replace("/login/commander"); return; }
 

@@ -19,31 +19,31 @@ export default function CommanderHome() {
 
   useEffect(() => {
     async function load() {
+      // getUser() validates the token via network and refreshes it if expired
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/login/commander"); return; }
 
-      const { data: fm } = await supabase
-        .from("family_members")
-        .select("family_id, families(name)")
-        .eq("user_id", user.id)
-        .single();
+      // getSession() now returns the freshly-refreshed access_token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.replace("/login/commander"); return; }
 
-      if (!fm) {
-        // 尚未建立家庭，導向 onboarding
+      const res = await fetch("/api/commander/home", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (res.status === 404) {
         router.replace("/signup");
         return;
       }
+      if (!res.ok) { setLoading(false); return; }
 
-      const fid = fm.family_id;
-      const familyName = (fm.families as unknown as { name: string })?.name ?? "我的家庭";
-
-      const [{ count: cadetCount }, { count: pendingApprovals }, { count: pendingFulfill }] = await Promise.all([
-        supabase.from("children").select("*", { count: "exact", head: true }).eq("family_id", fid).eq("is_active", true),
-        supabase.from("task_completions").select("*", { count: "exact", head: true }).eq("family_id", fid).eq("status", "pending"),
-        supabase.from("redemptions").select("*", { count: "exact", head: true }).eq("family_id", fid).eq("status", "fulfilled"),
-      ]);
-
-      setSummary({ familyName, cadetCount: cadetCount ?? 0, pendingApprovals: pendingApprovals ?? 0, pendingFulfill: pendingFulfill ?? 0 });
+      const body = await res.json();
+      setSummary({
+        familyName: body.familyName,
+        cadetCount: body.cadetCount,
+        pendingApprovals: body.pendingApprovals,
+        pendingFulfill: body.pendingFulfill,
+      });
       setLoading(false);
     }
     load();
