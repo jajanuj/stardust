@@ -97,27 +97,27 @@ export default function TasksPage() {
   useEffect(() => { load(); }, [load]);
 
   async function archive(taskId: string) {
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: "archived" } : t));
     await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "archived" }),
     });
-    load();
   }
 
   async function restore(taskId: string) {
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: "active" } : t));
     await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "active" }),
     });
-    load();
   }
 
   async function deleteTask(taskId: string, title: string) {
     if (!confirm(`確定要永久刪除「${title}」？\n此操作無法復原，相關完成紀錄也會一併刪除。`)) return;
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
     await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
-    load();
   }
 
   const filtered = tasks.filter((t) => t.status === filter);
