@@ -37,25 +37,31 @@ export default function CadetTasksPage() {
   const todayDay = new Date().getDay();
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace("/login/cadet"); return; }
+    // 學員用 getSession()（不需 auth.users），從 user_metadata 取 child_id
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/login/cadet"); return; }
 
-    const jwt = await supabase.auth.getSession();
-    const meta = jwt.data.session?.user?.user_metadata;
-    const cid = meta?.child_id ?? user.id;
+    const meta = session.user?.user_metadata ?? {};
+    const cid: string = meta.child_id ?? session.user.id;
     setChildId(cid);
 
-    const { data: child } = await supabase.from("children").select("coins").eq("id", cid).single();
+    // 透過 API Route 查詢（admin client 繞過 RLS，確保學員能看到任務）
+    const res = await fetch("/api/cadet/tasks", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+
+    const body = await res.json();
+    setTasks(body.tasks ?? []);
+
+    // 另外抓一次最新星塵餘額
+    const { data: child } = await supabase
+      .from("children")
+      .select("coins")
+      .eq("id", cid)
+      .single();
     setCoins(child?.coins ?? 0);
 
-    const { data } = await supabase
-      .from("tasks")
-      .select(`*, task_completions!left(id,status,completion_date)`)
-      .eq("status", "active")
-      .or(`assigned_to.eq.${cid},assigned_to.is.null`)
-      .order("created_at");
-
-    setTasks(data ?? []);
     setLoading(false);
   }, [router]);
 
