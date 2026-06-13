@@ -167,6 +167,15 @@
 | `/api/children/adjust-coins` | 手動調整星塵 RPC | ✅ |
 | `/api/push/subscribe` | Web Push 訂閱管理 | ✅ |
 | `/api/export` | 資料匯出（JSON/CSV） | ✅ |
+| `/api/commander/home` | 指揮官首頁摘要（admin client） | ✅ |
+| `/api/commander/approvals` | 待審核任務清單（admin client） | ✅ |
+| `/api/commander/rewards` | 獎勵清單（admin client） | ✅ |
+| `/api/cadet/home` | 學員首頁摘要（admin client） | ✅ |
+| `/api/cadet/shop` | 商城資料（admin client） | ✅ |
+| `/api/cadet/history` | 流水帳（admin client） | ✅ |
+| `/api/cadet/wishlist` | 心願清單（admin client） | ✅ |
+| `/api/cadet/pet` | 寵物資料（admin client） | ✅ |
+| `/api/cadet/achievements` | 成就資料（admin client） | ✅ |
 
 ---
 
@@ -184,6 +193,14 @@
 | phase4.spec.ts | 6 | ✅ |
 | templates.spec.ts | 3 | ✅ |
 | **合計** | **53** | **✅ 53/53** |
+
+---
+
+## 已知問題（下一步處理）
+
+- **指揮官其他頁面仍用 `supabase.from()` 直接查詢**（在 Vercel 生產環境有 401 風險）：
+  - `/commander/tasks`、`/commander/fulfill`、`/commander/messages`、`/commander/history`、`/commander/leaderboard`、`/commander/stats`
+  - 需要各自建立對應 `/api/commander/*` API route + admin client
 
 ---
 
@@ -218,3 +235,6 @@
 | 2026-06-12 | 學員系統：iOS session 清除問題 → 改用獨立 localStorage (lib/cadetSession.ts)；KID 自動大寫 |
 | 2026-06-12 | 學員任務：完成任務補上 Authorization header；任務/首頁改走 /api/cadet/* admin client |
 | 2026-06-13 | 學員首頁修正：移除 supabase.auth.getUser()（學員不在 auth.users 導致登入後被踢回）→ 改用 getCadetToken() + /api/cadet/home；任務完成錯誤訊息顯示實際原因（err.code → err.error） |
+| 2026-06-13 | 多個學員頁面（shop/history/wishlist/pet/achievements）改走 /api/cadet/* + admin client；wishlist toggle 改用 verifyCadet 安全驗證 |
+| 2026-06-13 | PWA icon 404 修正：新增 public/icon.svg + 更新 manifest.json 改用 SVG |
+| 2026-06-13 | 指揮官首頁/審核/獎勵修正：新增 /api/commander/home（admin client），改走 getUser() → getSession() 取得新鮮 token，修正學員數顯示0、待審核顯示0、新增獎勵按鈕無效 3 個問題 |
