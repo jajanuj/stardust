@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await admin.rpc("reject_completion", {
     p_completion_id: completionId,
-    p_approver_id: approverId,
+    p_approver: approverId,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
