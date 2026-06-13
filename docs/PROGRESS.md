@@ -176,6 +176,13 @@
 | `/api/cadet/wishlist` | 心願清單（admin client） | ✅ |
 | `/api/cadet/pet` | 寵物資料（admin client） | ✅ |
 | `/api/cadet/achievements` | 成就資料（admin client） | ✅ |
+| `/api/commander/cadets` | 學員清單（admin client） | ✅ |
+| `/api/commander/tasks` | 任務+學員清單（admin client） | ✅ |
+| `/api/commander/fulfill` | 待兌現清單（admin client） | ✅ |
+| `/api/commander/history` | 流水帳（admin client） | ✅ |
+| `/api/commander/messages` | 留言板（admin client） | ✅ |
+| `/api/commander/leaderboard` | 排行榜（admin client） | ✅ |
+| `/api/commander/stats` | 統計報表（admin client） | ✅ |
 
 ---
 
@@ -195,12 +202,6 @@
 | **合計** | **53** | **✅ 53/53** |
 
 ---
-
-## 已知問題（下一步處理）
-
-- **指揮官其他頁面仍用 `supabase.from()` 直接查詢**（在 Vercel 生產環境有 401 風險）：
-  - `/commander/tasks`、`/commander/fulfill`、`/commander/messages`、`/commander/history`、`/commander/leaderboard`、`/commander/stats`
-  - 需要各自建立對應 `/api/commander/*` API route + admin client
 
 ---
 
@@ -238,3 +239,5 @@
 | 2026-06-13 | 多個學員頁面（shop/history/wishlist/pet/achievements）改走 /api/cadet/* + admin client；wishlist toggle 改用 verifyCadet 安全驗證 |
 | 2026-06-13 | PWA icon 404 修正：新增 public/icon.svg + 更新 manifest.json 改用 SVG |
 | 2026-06-13 | 指揮官首頁/審核/獎勵修正：新增 /api/commander/home（admin client），改走 getUser() → getSession() 取得新鮮 token，修正學員數顯示0、待審核顯示0、新增獎勵按鈕無效 3 個問題 |
+| 2026-06-13 | 任務頁星塵顯示改從 DB 讀取：/api/cadet/tasks 加上 coins 回傳，修正指揮官核可後餘額不同步問題 |
+| 2026-06-13 | 全面移除指揮官頁面直接 supabase.from() 查詢：新增 7 個 /api/commander/* admin client routes（cadets/tasks/fulfill/history/messages/leaderboard/stats），修正所有 console 406/401 錯誤 |
