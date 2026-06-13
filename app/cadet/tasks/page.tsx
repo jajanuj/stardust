@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { getCadetToken, getCadetInfo } from "@/lib/cadetSession";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -37,31 +38,22 @@ export default function CadetTasksPage() {
   const todayDay = new Date().getDay();
 
   const load = useCallback(async () => {
-    // 學員用 getSession()（不需 auth.users），從 user_metadata 取 child_id
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { router.replace("/login/cadet"); return; }
+    const token = getCadetToken();
+    if (!token) { router.replace("/login/cadet"); return; }
 
-    const meta = session.user?.user_metadata ?? {};
-    const cid: string = meta.child_id ?? session.user.id;
+    const info = getCadetInfo();
+    const cid = info?.id ?? "";
     setChildId(cid);
+    setCoins(info?.coins ?? 0);
 
-    // 透過 API Route 查詢（admin client 繞過 RLS，確保學員能看到任務）
+    // 透過 API Route（admin client），帶 JWT 取任務
     const res = await fetch("/api/cadet/tasks", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) { setLoading(false); return; }
 
     const body = await res.json();
     setTasks(body.tasks ?? []);
-
-    // 另外抓一次最新星塵餘額
-    const { data: child } = await supabase
-      .from("children")
-      .select("coins")
-      .eq("id", cid)
-      .single();
-    setCoins(child?.coins ?? 0);
-
     setLoading(false);
   }, [router]);
 

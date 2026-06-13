@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { clearCadetSession } from "@/lib/cadetSession";
 
 const NAV = [
   { href: "/cadet", label: "首頁", icon: "🏠", exact: true },
@@ -26,8 +26,8 @@ export default function CadetLayout({ children }: { children: React.ReactNode })
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
           <span className="font-black text-stardust-glow">StarDuty</span>
           <button
-            onClick={async () => {
-              await supabase.auth.signOut();
+            onClick={() => {
+              clearCadetSession();
               router.push("/");
             }}
             className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-400 hover:text-white"

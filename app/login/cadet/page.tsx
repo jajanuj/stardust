@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { setCadetSession } from "@/lib/supabase/client";
+import { saveCadetSession } from "@/lib/cadetSession";
 
 export default function CadetLogin() {
   const router = useRouter();
@@ -26,9 +26,8 @@ export default function CadetLogin() {
         setError(data.message ?? "登入失敗");
         return;
       }
-      await setCadetSession(data.access_token);
-      // 暫存學員基本資料供首頁顯示
-      sessionStorage.setItem("cadet", JSON.stringify(data.child));
+      // 直接存 localStorage，不走 Supabase session（避免 autoRefreshToken 清除）
+      saveCadetSession(data.access_token, data.child);
       router.push("/cadet");
     } catch {
       setError("網路連線失敗，請再試一次");
