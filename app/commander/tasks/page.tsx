@@ -114,6 +114,12 @@ export default function TasksPage() {
     load();
   }
 
+  async function deleteTask(taskId: string, title: string) {
+    if (!confirm(`確定要永久刪除「${title}」？\n此操作無法復原，相關完成紀錄也會一併刪除。`)) return;
+    await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    load();
+  }
+
   const filtered = tasks.filter((t) => t.status === filter);
 
   if (loading) return <div className="py-20 text-center text-slate-500">載入中…</div>;
@@ -184,8 +190,12 @@ export default function TasksPage() {
                   <button onClick={() => archive(t.id)}
                     className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-400 hover:text-white">封存</button>
                 ) : (
-                  <button onClick={() => restore(t.id)}
-                    className="rounded-lg border border-green-500/30 px-3 py-1.5 text-xs text-green-400 hover:text-green-300">恢復</button>
+                  <>
+                    <button onClick={() => restore(t.id)}
+                      className="rounded-lg border border-green-500/30 px-3 py-1.5 text-xs text-green-400 hover:text-green-300">恢復</button>
+                    <button onClick={() => deleteTask(t.id, t.title)}
+                      className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-400 hover:text-red-300">刪除</button>
+                  </>
                 )}
               </div>
             </div>
