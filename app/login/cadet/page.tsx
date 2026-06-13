@@ -50,9 +50,11 @@ export default function CadetLogin() {
           KID 代碼
           <input
             value={kidCode}
-            onChange={(e) => setKidCode(e.target.value)}
+            onChange={(e) => setKidCode(e.target.value.toUpperCase())}
             placeholder="KID-XXXXXX"
             autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
             className="rounded-lg border border-white/10 bg-space-700 px-4 py-3 tracking-widest"
             required
           />
