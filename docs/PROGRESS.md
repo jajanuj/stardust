@@ -3,7 +3,7 @@
 > 這是進度的單一真相來源(single source of truth)。每次交付一段功能/頁面/修正後固定更新此檔。
 > 設計細節見 [`StarDuty-plan.md`](./StarDuty-plan.md)。
 
-**最後更新：2026-06-13（常用任務功能完成）**
+**最後更新：2026-06-13（常用任務 DB 版完成）**
 **計畫版次：v0.5**
 
 ---
@@ -98,7 +98,7 @@
 
 **Phase 4 追加功能（全部完成）**
 - [x] 任務模板庫（`/commander/tasks` 模板按鈕，20 個內建任務）
-- [x] 常用任務（自訂模板）：修改模板內容後可存為常用任務，模板庫頂部一鍵帶入/刪除（localStorage 依家庭分開）
+- [x] 常用任務（自訂模板）：修改模板內容後可存為常用任務，模板庫頂部一鍵帶入/刪除（DB task_templates，跨裝置同步）
 - [x] 週/月統計報表（`/commander/stats`：每日趨勢圖、學員排行）
 - [x] 資料匯出 / 備份（`/api/export` JSON 完整備份 + CSV 流水帳）
 - [ ] 多語系支援（低優先，視實際需求）
@@ -184,6 +184,8 @@
 | `/api/commander/messages` | 留言板（admin client） | ✅ |
 | `/api/commander/leaderboard` | 排行榜（admin client） | ✅ |
 | `/api/commander/stats` | 統計報表（admin client） | ✅ |
+| `/api/commander/templates` | 常用任務 GET/POST（admin client） | ✅ |
+| `/api/commander/templates/[id]` | 常用任務 DELETE（admin client） | ✅ |
 
 ---
 
@@ -241,7 +243,7 @@
 | 2026-06-13 | Bug 修正：指揮官首頁 0 顯示、審核 500 錯誤（RPC 參數名修正）、任務頁星塵顯示錯誤（改從 DB 讀取）、全指揮官頁面 406 錯誤（改走 admin client API routes）、adjust-coins RPC 無效參數 |
 | 2026-06-13 | 新功能：手動調整星塵 UI（CoinsModal：快速選擇 ±5/10/20/50、自訂數值、原因欄位、成功畫面） |
 | 2026-06-13 | E2E 測試：coins-adjustment.spec.ts（6/6 通過）— 新增 /api/test/auth-link 開發測試輔助、magic link + localStorage session 注入、完整流程/負值/0 值驗證 |
-| 2026-06-13 | 新功能：常用任務（自訂模板）— 模板表單可「存為常用任務」，模板庫頂部顯示常用任務清單可一鍵帶入/刪除；localStorage 依家庭分開儲存（lib/customTemplates.ts）。E2E custom-templates.spec.ts 3/3 通過，全測試 62/62 |
+| 2026-06-13 | 新功能：常用任務（自訂模板）— 模板表單可「存為常用任務」，模板庫頂部顯示常用任務清單可一鍵帶入/刪除。DB 版（task_templates 表，跨裝置同步）：migration 0006 擴充 description/recur_days 欄位 + RLS；新增 /api/commander/templates GET/POST 與 /[id] DELETE（verifyCommander 限定家庭）。E2E custom-templates.spec.ts 3/3 通過（含 afterEach 清理避免污染正式資料），全測試 62/62 |
 | 2026-06-13 | 學員首頁修正：移除 supabase.auth.getUser()（學員不在 auth.users 導致登入後被踢回）→ 改用 getCadetToken() + /api/cadet/home；任務完成錯誤訊息顯示實際原因（err.code → err.error） |
 | 2026-06-13 | 多個學員頁面（shop/history/wishlist/pet/achievements）改走 /api/cadet/* + admin client；wishlist toggle 改用 verifyCadet 安全驗證 |
 | 2026-06-13 | PWA icon 404 修正：新增 public/icon.svg + 更新 manifest.json 改用 SVG |

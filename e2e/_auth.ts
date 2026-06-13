@@ -63,3 +63,14 @@ export async function loginAsCommander(page: Page, targetPath = "/commander"): P
 
   await page.goto(`${BASE}${targetPath}`);
 }
+
+/** 從已登入頁面的 localStorage 取出 access_token（供 afterEach 清理用） */
+export async function getAccessToken(page: Page): Promise<string> {
+  const raw = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
+  if (!raw) return "";
+  try {
+    return (JSON.parse(raw) as { access_token?: string }).access_token ?? "";
+  } catch {
+    return "";
+  }
+}

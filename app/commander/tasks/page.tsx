@@ -3,12 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import {
-  getCustomTemplates,
-  saveCustomTemplate,
-  deleteCustomTemplate,
-  type CustomTemplate,
-} from "@/lib/customTemplates";
+import type { CustomTemplate, CustomTemplateInput } from "@/lib/customTemplates";
 
 const TASK_ICONS = ["📚", "🧹", "🍽️", "🛁", "🐕", "🌱", "💪", "🎵", "🏃", "🧘", "🍱", "🛏️", "♻️", "🖊️"];
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -80,6 +75,23 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<Modal>(null);
   const [filter, setFilter] = useState<"active" | "archived">("active");
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
+
+  async function getToken(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  }
+
+  const loadTemplates = useCallback(async () => {
+    const token = await getToken();
+    if (!token) return;
+    const res = await fetch("/api/commander/templates", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const body = await res.json();
+    setCustomTemplates(body.templates ?? []);
+  }, []);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -97,9 +109,33 @@ export default function TasksPage() {
     setTasks(body.tasks ?? []);
     setCadets(body.cadets ?? []);
     setLoading(false);
-  }, [router]);
+    loadTemplates();
+  }, [router, loadTemplates]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function saveTemplate(input: CustomTemplateInput): Promise<boolean> {
+    const token = await getToken();
+    if (!token) return false;
+    const res = await fetch("/api/commander/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    });
+    if (res.ok) await loadTemplates();
+    return res.ok;
+  }
+
+  async function removeTemplate(id: string): Promise<void> {
+    setCustomTemplates((prev) => prev.filter((t) => t.id !== id));
+    const token = await getToken();
+    if (!token) return;
+    await fetch(`/api/commander/templates/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    loadTemplates();
+  }
 
   async function archive(taskId: string) {
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: "archived" } : t));
@@ -208,9 +244,10 @@ export default function TasksPage() {
         })}
       </div>
 
-      {modal?.type === "templates" && familyId && (
+      {modal?.type === "templates" && (
         <TemplateModal
-          familyId={familyId}
+          customs={customTemplates}
+          onDelete={removeTemplate}
           onSelect={(tpl) => setModal({ type: "add", template: tpl })}
           onClose={() => setModal(null)}
         />
@@ -221,6 +258,7 @@ export default function TasksPage() {
           familyId={familyId}
           userId={userId}
           template={modal.template}
+          onSaveTemplate={saveTemplate}
           onClose={() => setModal(null)}
           onDone={load}
         />
@@ -230,6 +268,7 @@ export default function TasksPage() {
           cadets={cadets}
           familyId={familyId ?? undefined}
           task={modal.task}
+          onSaveTemplate={saveTemplate}
           onClose={() => setModal(null)}
           onDone={load}
         />
@@ -252,17 +291,14 @@ function typeLabel(t: string) {
   return t === "once" ? "一次性" : t === "daily" ? "每日" : "每週";
 }
 
-function TemplateModal({ familyId, onSelect, onClose }: { familyId: string; onSelect: (t: TaskTemplate) => void; onClose: () => void }) {
+function TemplateModal({ customs, onDelete, onSelect, onClose }: {
+  customs: CustomTemplate[];
+  onDelete: (id: string) => void;
+  onSelect: (t: TaskTemplate) => void;
+  onClose: () => void;
+}) {
   const [activeCategory, setActiveCategory] = useState(TEMPLATE_CATEGORIES[0]);
-  const [customs, setCustoms] = useState<CustomTemplate[]>([]);
   const filtered = TASK_TEMPLATES.filter((t) => t.category === activeCategory);
-
-  useEffect(() => { setCustoms(getCustomTemplates(familyId)); }, [familyId]);
-
-  function removeCustom(id: string) {
-    deleteCustomTemplate(familyId, id);
-    setCustoms(getCustomTemplates(familyId));
-  }
 
   function selectCustom(c: CustomTemplate) {
     onSelect({
@@ -302,7 +338,7 @@ function TemplateModal({ familyId, onSelect, onClose }: { familyId: string; onSe
                       <p className="text-xs text-slate-500">{typeLabel(c.taskType)}</p>
                     </div>
                   </button>
-                  <button onClick={() => removeCustom(c.id)} aria-label="刪除常用任務"
+                  <button onClick={() => onDelete(c.id)} aria-label="刪除常用任務"
                     className="shrink-0 rounded-lg px-2 py-1 text-slate-500 hover:bg-red-900/30 hover:text-red-400">
                     ✕
                   </button>
@@ -352,11 +388,12 @@ interface TaskFormProps {
   template?: TaskTemplate;
   familyId?: string;
   userId?: string;
+  onSaveTemplate?: (input: CustomTemplateInput) => Promise<boolean>;
   onClose: () => void;
   onDone: () => void;
 }
 
-function TaskFormModal({ cadets, task, template, familyId, userId, onClose, onDone }: TaskFormProps) {
+function TaskFormModal({ cadets, task, template, familyId, userId, onSaveTemplate, onClose, onDone }: TaskFormProps) {
   const isEdit = !!task;
   const [title, setTitle] = useState(task?.title ?? template?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? template?.description ?? "");
@@ -372,17 +409,19 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onClose, onDo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [savedTpl, setSavedTpl] = useState(false);
+  const [savingTpl, setSavingTpl] = useState(false);
 
   function toggleDay(d: number) {
     setRecurDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort());
   }
 
-  function saveAsTemplate() {
-    if (!familyId) return;
+  async function saveAsTemplate() {
+    if (!onSaveTemplate) return;
     if (!title.trim()) { setError("請先輸入任務名稱再存為常用任務"); return; }
     if (taskType === "weekly" && recurDays.length === 0) { setError("每週任務請先選擇出現日期"); return; }
     setError("");
-    saveCustomTemplate(familyId, {
+    setSavingTpl(true);
+    const ok = await onSaveTemplate({
       icon,
       title: title.trim(),
       description: description.trim(),
@@ -390,6 +429,8 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onClose, onDo
       taskType,
       recurDays: taskType === "weekly" ? recurDays : undefined,
     });
+    setSavingTpl(false);
+    if (!ok) { setError("存為常用任務失敗，請再試"); return; }
     setSavedTpl(true);
     setTimeout(() => setSavedTpl(false), 2500);
   }
@@ -531,12 +572,12 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onClose, onDo
           {error && <p className="text-sm text-nebula-pink">{error}</p>}
 
           {/* 存為常用任務 */}
-          {familyId && (
-            <button type="button" onClick={saveAsTemplate}
+          {onSaveTemplate && (
+            <button type="button" onClick={saveAsTemplate} disabled={savingTpl}
               className={`w-full rounded-xl border py-2.5 text-sm transition ${savedTpl
                 ? "border-green-500/50 text-green-400"
                 : "border-stardust/40 text-stardust hover:bg-stardust/10"}`}>
-              {savedTpl ? "✓ 已加入常用任務" : "⭐ 存為常用任務"}
+              {savedTpl ? "✓ 已加入常用任務" : savingTpl ? "儲存中…" : "⭐ 存為常用任務"}
             </button>
           )}
 

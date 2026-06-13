@@ -1,9 +1,27 @@
 import { test, expect } from "@playwright/test";
-import { BASE, loginAsCommander } from "./_auth";
+import { BASE, loginAsCommander, getAccessToken } from "./_auth";
 
 const UNIQUE_TITLE = `E2E常用任務_${Date.now()}`;
 
 test.describe("常用任務（自訂模板）", () => {
+  // 此功能寫入真實家庭 DB，每個測試後清掉所有 E2E 前綴的常用任務，避免污染正式資料
+  test.afterEach(async ({ page }) => {
+    const token = await getAccessToken(page);
+    if (!token) return;
+    const res = await page.request.get(`${BASE}/api/commander/templates`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok()) return;
+    const { templates } = await res.json();
+    for (const t of templates ?? []) {
+      if (typeof t.title === "string" && t.title.startsWith("E2E")) {
+        await page.request.delete(`${BASE}/api/commander/templates/${t.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    }
+  });
+
   test("完整流程：建內建模板 → 改內容 → 存常用 → 重開帶入 → 刪除", async ({ page }) => {
     await loginAsCommander(page, "/commander/tasks");
     await expect(page.locator("h1", { hasText: "任務管理" })).toBeVisible({ timeout: 10000 });
