@@ -22,15 +22,15 @@ export default function HistoryPage() {
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace("/login/commander"); return; }
-    const { data: fm } = await supabase.from("family_members").select("family_id").eq("user_id", user.id).single();
-    if (!fm) { setLoading(false); return; }
-    const { data } = await supabase
-      .from("coin_transactions")
-      .select("id,delta,balance_after,reason,created_at,children(name,avatar)")
-      .eq("family_id", fm.family_id)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setTxs((data as unknown as TxItem[]) ?? []);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/login/commander"); return; }
+
+    const res = await fetch("/api/commander/history", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setTxs((body.transactions as TxItem[]) ?? []);
     setLoading(false);
   }, [router]);
 

@@ -28,25 +28,16 @@ export default function StatsPage() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace("/login/commander"); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/login/commander"); return; }
 
-    const { data: fm } = await supabase.from("family_members").select("family_id").eq("user_id", user.id).single();
-    if (!fm) { setLoading(false); return; }
-
-    const since = period === "week"
-      ? new Date(Date.now() - 7 * 86400_000).toISOString()
-      : new Date(Date.now() - 30 * 86400_000).toISOString();
-
-    const [{ data: cadetData }, { data: txData }] = await Promise.all([
-      supabase.from("children").select("id,name,avatar,coins").eq("family_id", fm.family_id).eq("is_active", true),
-      supabase.from("coin_transactions")
-        .select("child_id,delta,reason,created_at")
-        .eq("family_id", fm.family_id)
-        .gte("created_at", since)
-        .order("created_at", { ascending: true }),
-    ]);
-
-    setCadets(cadetData ?? []);
-    setTransactions(txData ?? []);
+    const res = await fetch(`/api/commander/stats?period=${period}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setCadets(body.cadets ?? []);
+    setTransactions(body.transactions ?? []);
     setLoading(false);
   }, [router, period]);
 

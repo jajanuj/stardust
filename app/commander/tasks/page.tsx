@@ -78,19 +78,18 @@ export default function TasksPage() {
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace("/login/commander"); return; }
-    setUserId(user.id);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/login/commander"); return; }
 
-    const { data: fm } = await supabase.from("family_members").select("family_id").eq("user_id", user.id).single();
-    if (!fm) { setLoading(false); return; }
-    setFamilyId(fm.family_id);
-
-    const [{ data: taskData }, { data: cadetData }] = await Promise.all([
-      supabase.from("tasks").select("*").eq("family_id", fm.family_id).order("created_at", { ascending: false }),
-      supabase.from("children").select("id,name,avatar").eq("family_id", fm.family_id).eq("is_active", true),
-    ]);
-
-    setTasks(taskData ?? []);
-    setCadets(cadetData ?? []);
+    const res = await fetch("/api/commander/tasks", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setUserId(body.userId ?? null);
+    setFamilyId(body.familyId ?? null);
+    setTasks(body.tasks ?? []);
+    setCadets(body.cadets ?? []);
     setLoading(false);
   }, [router]);
 

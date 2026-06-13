@@ -15,15 +15,15 @@ export default function LeaderboardPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/login/commander"); return; }
-      const { data: fm } = await supabase.from("family_members").select("family_id").eq("user_id", user.id).single();
-      if (!fm) { setLoading(false); return; }
-      const { data } = await supabase
-        .from("children")
-        .select("id,name,avatar,coins")
-        .eq("family_id", fm.family_id)
-        .eq("is_active", true)
-        .order("coins", { ascending: false });
-      setCadets(data ?? []);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.replace("/login/commander"); return; }
+
+      const res = await fetch("/api/commander/leaderboard", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) { setLoading(false); return; }
+      const body = await res.json();
+      setCadets(body.cadets ?? []);
       setLoading(false);
     }
     load();

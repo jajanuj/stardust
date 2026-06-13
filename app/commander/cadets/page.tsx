@@ -33,23 +33,16 @@ export default function CadetsPage() {
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace("/login/commander"); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/login/commander"); return; }
 
-    const { data: fm } = await supabase
-      .from("family_members")
-      .select("family_id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!fm) { setLoading(false); return; }
-    setFamilyId(fm.family_id);
-
-    const { data } = await supabase
-      .from("children")
-      .select("id,name,avatar,kid_code,coins,is_active,pin_hash")
-      .eq("family_id", fm.family_id)
-      .order("created_at");
-
-    setCadets(data ?? []);
+    const res = await fetch("/api/commander/cadets", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setFamilyId(body.familyId ?? null);
+    setCadets(body.cadets ?? []);
     setLoading(false);
   }, [router]);
 
