@@ -6,9 +6,13 @@ import { mapRpcError } from "@/lib/errors";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const authHeader = req.headers.get("authorization") ?? "(none)";
+  const hasToken = authHeader.startsWith("Bearer ") && authHeader.length > 10;
   const cadet = await verifyCadet(req);
   if (!cadet) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    const reason = !hasToken ? "no_token" : "invalid_token";
+    console.error("[complete] 401 reason:", reason, "header prefix:", authHeader.substring(0, 20));
+    return NextResponse.json({ error: "unauthorized", reason }, { status: 401 });
   }
 
   let taskId = "";

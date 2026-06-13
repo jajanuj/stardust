@@ -12,18 +12,34 @@ export interface VerifiedCadet {
 export async function verifyCadet(req: Request): Promise<VerifiedCadet | null> {
   const header = req.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!token) return null;
+  if (!token) {
+    console.warn("[verifyCadet] no token in Authorization header");
+    return null;
+  }
+
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+  if (!jwtSecret) {
+    console.error("[verifyCadet] SUPABASE_JWT_SECRET env var not set!");
+    return null;
+  }
 
   try {
-    const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET!);
+    const secret = new TextEncoder().encode(jwtSecret);
     const { payload } = await jwtVerify(token, secret);
     const meta = (payload.user_metadata ?? {}) as Record<string, unknown>;
-    if (meta.kind !== "cadet") return null;
+    if (meta.kind !== "cadet") {
+      console.warn("[verifyCadet] not a cadet token, kind:", meta.kind);
+      return null;
+    }
     const childId = meta.child_id as string | undefined;
     const familyId = meta.family_id as string | undefined;
-    if (!childId || !familyId) return null;
+    if (!childId || !familyId) {
+      console.warn("[verifyCadet] missing child_id or family_id in token");
+      return null;
+    }
     return { childId, familyId };
-  } catch {
+  } catch (e) {
+    console.error("[verifyCadet] JWT verify failed:", (e as Error).message);
     return null;
   }
 }

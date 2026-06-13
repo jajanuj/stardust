@@ -97,6 +97,10 @@ export default function CadetTasksPage() {
       const err = await res.json().catch(() => ({}));
       if (err.error === "already_completed_today" || err.message?.includes("already_completed_today")) {
         showToast("今天已完成過囉！", "info");
+      } else if (res.status === 401) {
+        // token 失效，重新登入
+        showToast("登入已過期，請重新登入", "error");
+        setTimeout(() => router.replace("/login/cadet"), 1500);
       } else {
         showToast(`發生錯誤：${err.message ?? err.error ?? res.status}`, "error");
       }
