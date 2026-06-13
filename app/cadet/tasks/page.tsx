@@ -94,9 +94,12 @@ export default function CadetTasksPage() {
     });
     setCompleting(null);
     if (!res.ok) {
-      const err = await res.json();
-      if (err.code === "already_completed_today") showToast("今天已完成過囉！", "info");
-      else showToast("發生錯誤，請再試一次", "error");
+      const err = await res.json().catch(() => ({}));
+      if (err.error === "already_completed_today" || err.message?.includes("already_completed_today")) {
+        showToast("今天已完成過囉！", "info");
+      } else {
+        showToast(`發生錯誤：${err.message ?? err.error ?? res.status}`, "error");
+      }
       return;
     }
     const result: CompletionResult = await res.json();

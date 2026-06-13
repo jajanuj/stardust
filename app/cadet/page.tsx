@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
+import { getCadetToken, getCadetInfo } from "@/lib/cadetSession";
 
-interface CadetInfo {
+interface HomeInfo {
   name: string;
   avatar: string;
   coins: number;
@@ -15,58 +15,33 @@ interface CadetInfo {
 
 export default function CadetHome() {
   const router = useRouter();
-  const [info, setInfo] = useState<CadetInfo | null>(null);
+  const [info, setInfo] = useState<HomeInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace("/login/cadet"); return; }
+      const token = getCadetToken();
+      if (!token) { router.replace("/login/cadet"); return; }
 
-      const meta = user.user_metadata;
-      const childId = meta?.child_id ?? user.id;
-
-      const { data: child } = await supabase
-        .from("children")
-        .select("name,avatar,coins")
-        .eq("id", childId)
-        .single();
-
-      if (!child) { setLoading(false); return; }
-
-      const today = new Date().toLocaleDateString("sv-SE");
-      const { data: tasks } = await supabase
-        .from("tasks")
-        .select("id,task_type,recur_days,task_completions!left(completion_date,status)")
-        .eq("status", "active")
-        .or(`assigned_to.eq.${childId},assigned_to.is.null`);
-
-      const todayDay = new Date().getDay();
-      let todayTotal = 0;
-      let todayDone = 0;
-      for (const t of tasks ?? []) {
-        const visible = t.task_type === "weekly"
-          ? (t.recur_days ?? []).includes(todayDay)
-          : true;
-        if (!visible) continue;
-        if (t.task_type === "once") {
-          const anyDone = (t.task_completions ?? []).some((c: { status: string }) => c.status !== "rejected");
-          if (anyDone) continue;
-        }
-        todayTotal++;
-        const done = (t.task_completions ?? []).some(
-          (c: { completion_date: string }) => c.completion_date === today
-        );
-        if (done) todayDone++;
+      // 先用 localStorage 快速顯示基本資訊
+      const cached = getCadetInfo();
+      if (cached) {
+        setInfo({ name: cached.name, avatar: cached.avatar, coins: cached.coins, todayDone: 0, todayTotal: 0 });
       }
 
-      setInfo({ name: child.name, avatar: child.avatar, coins: child.coins, todayDone, todayTotal });
+      const res = await fetch("/api/cadet/home", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { setLoading(false); return; }
+
+      const data = await res.json();
+      setInfo(data);
       setLoading(false);
     }
     load();
   }, [router]);
 
-  if (loading) return <div className="py-20 text-center text-slate-500">載入中…</div>;
+  if (loading && !info) return <div className="py-20 text-center text-slate-500">載入中…</div>;
   if (!info) return null;
 
   const pct = info.todayTotal > 0 ? Math.round((info.todayDone / info.todayTotal) * 100) : 100;
