@@ -3,7 +3,7 @@
 > 這是進度的單一真相來源(single source of truth)。每次交付一段功能/頁面/修正後固定更新此檔。
 > 設計細節見 [`StarDuty-plan.md`](./StarDuty-plan.md)。
 
-**最後更新：2026-06-13**
+**最後更新：2026-06-13（星塵調整 E2E 測試完成）**
 **計畫版次：v0.5**
 
 ---
@@ -199,7 +199,8 @@
 | phase3.spec.ts | 8 | ✅ |
 | phase4.spec.ts | 6 | ✅ |
 | templates.spec.ts | 3 | ✅ |
-| **合計** | **53** | **✅ 53/53** |
+| coins-adjustment.spec.ts | 6 | ✅ |
+| **合計** | **59** | **✅ 59/59** |
 
 ---
 
@@ -235,6 +236,9 @@
 | 2026-06-12 | 資料匯出/備份：JSON 完整備份 + CSV 流水帳，全 E2E 53/53 通過 |
 | 2026-06-12 | 學員系統：iOS session 清除問題 → 改用獨立 localStorage (lib/cadetSession.ts)；KID 自動大寫 |
 | 2026-06-12 | 學員任務：完成任務補上 Authorization header；任務/首頁改走 /api/cadet/* admin client |
+| 2026-06-13 | Bug 修正：指揮官首頁 0 顯示、審核 500 錯誤（RPC 參數名修正）、任務頁星塵顯示錯誤（改從 DB 讀取）、全指揮官頁面 406 錯誤（改走 admin client API routes）、adjust-coins RPC 無效參數 |
+| 2026-06-13 | 新功能：手動調整星塵 UI（CoinsModal：快速選擇 ±5/10/20/50、自訂數值、原因欄位、成功畫面） |
+| 2026-06-13 | E2E 測試：coins-adjustment.spec.ts（6/6 通過）— 新增 /api/test/auth-link 開發測試輔助、magic link + localStorage session 注入、完整流程/負值/0 值驗證 |
 | 2026-06-13 | 學員首頁修正：移除 supabase.auth.getUser()（學員不在 auth.users 導致登入後被踢回）→ 改用 getCadetToken() + /api/cadet/home；任務完成錯誤訊息顯示實際原因（err.code → err.error） |
 | 2026-06-13 | 多個學員頁面（shop/history/wishlist/pet/achievements）改走 /api/cadet/* + admin client；wishlist toggle 改用 verifyCadet 安全驗證 |
 | 2026-06-13 | PWA icon 404 修正：新增 public/icon.svg + 更新 manifest.json 改用 SVG |
