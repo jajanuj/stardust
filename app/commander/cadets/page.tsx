@@ -21,6 +21,7 @@ type Modal =
   | { type: "edit"; child: Child }
   | { type: "pin"; child: Child }
   | { type: "card"; child: Child }
+  | { type: "coins"; child: Child }
   | null;
 
 export default function CadetsPage() {
@@ -108,6 +109,12 @@ export default function CadetsPage() {
               >
                 PIN
               </button>
+              <button
+                onClick={() => setModal({ type: "coins", child: c })}
+                className="rounded-lg border border-stardust/40 px-3 py-1.5 text-xs text-stardust hover:bg-stardust/10"
+              >
+                ⭐ 星塵
+              </button>
             </div>
           </div>
         ))}
@@ -124,6 +131,9 @@ export default function CadetsPage() {
       )}
       {modal?.type === "card" && (
         <CardModal child={modal.child} onClose={() => setModal(null)} />
+      )}
+      {modal?.type === "coins" && (
+        <CoinsModal child={modal.child} onClose={() => setModal(null)} onDone={load} />
       )}
     </div>
   );
@@ -311,6 +321,96 @@ function CardModal({ child, onClose }: { child: Child; onClose: () => void }) {
       <h2 className="mb-4 text-lg font-bold">學員登入卡</h2>
       <KidCard name={child.name} avatar={child.avatar} kidCode={child.kid_code} />
       <button onClick={onClose} className="btn-primary mt-4 w-full">關閉</button>
+    </ModalWrap>
+  );
+}
+
+/* ── 調整星塵 Modal ── */
+function CoinsModal({ child, onClose, onDone }: { child: Child; onClose: () => void; onDone: () => void }) {
+  const [delta, setDelta] = useState<number | "">(0);
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState<{ newBalance: number; delta: number } | null>(null);
+
+  const PRESETS = [+5, +10, +20, +50, -5, -10, -20, -50];
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const d = Number(delta);
+    if (!d || d === 0) { setError("請輸入非零的調整數值"); return; }
+    setLoading(true);
+    setError("");
+    const res = await fetch("/api/children/adjust-coins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ childId: child.id, delta: d, reason: reason.trim() || "manual_adjust" }),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "調整失敗，請再試");
+      return;
+    }
+    const body = await res.json();
+    setDone({ newBalance: body.result?.balance ?? child.coins + d, delta: d });
+    onDone();
+  }
+
+  if (done) return (
+    <ModalWrap onClose={onClose}>
+      <div className="flex flex-col items-center gap-4 py-4 text-center">
+        <span className="text-5xl">⭐</span>
+        <p className="text-lg font-bold">
+          {done.delta > 0 ? `+${done.delta}` : done.delta} 星塵
+        </p>
+        <p className="text-slate-400 text-sm">{child.name} 現有 <span className="font-bold text-stardust">{done.newBalance}</span> 星塵</p>
+        <button onClick={onClose} className="btn-primary w-full">完成</button>
+      </div>
+    </ModalWrap>
+  );
+
+  return (
+    <ModalWrap onClose={onClose}>
+      <h2 className="mb-1 text-lg font-bold">調整星塵 — {child.avatar} {child.name}</h2>
+      <p className="mb-4 text-sm text-slate-400">目前餘額：<span className="font-bold text-stardust">{child.coins}</span> 星塵</p>
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2 text-sm">
+          快速選擇
+          <div className="grid grid-cols-4 gap-2">
+            {PRESETS.map((p) => (
+              <button key={p} type="button" onClick={() => setDelta(p)}
+                className={`rounded-xl py-2 text-xs font-bold transition ${delta === p
+                  ? "bg-nebula-purple text-white"
+                  : p > 0 ? "bg-green-900/40 text-green-400 hover:bg-green-900/60" : "bg-red-900/40 text-nebula-pink hover:bg-red-900/60"}`}>
+                {p > 0 ? `+${p}` : p}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="flex flex-col gap-1 text-sm">
+          自訂數值（正數 = 增加，負數 = 扣除）
+          <input
+            type="number"
+            value={delta}
+            onChange={(e) => setDelta(e.target.value === "" ? "" : Number(e.target.value))}
+            className="input text-center text-xl font-bold"
+            placeholder="0"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          原因（選填）
+          <input value={reason} onChange={(e) => setReason(e.target.value)}
+            className="input" maxLength={50} placeholder="例：額外獎勵、扣除罰款…" />
+        </label>
+        {error && <p className="text-sm text-nebula-pink">{error}</p>}
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-white/10 py-3 text-sm">取消</button>
+          <button type="submit" disabled={loading || !delta || delta === 0} className="btn-primary flex-1">
+            {loading ? "調整中…" : "確認調整"}
+          </button>
+        </div>
+      </form>
     </ModalWrap>
   );
 }
