@@ -3,7 +3,7 @@
 > 這是進度的單一真相來源(single source of truth)。每次交付一段功能/頁面/修正後固定更新此檔。
 > 設計細節見 [`StarDuty-plan.md`](./StarDuty-plan.md)。
 
-**最後更新：2026-06-12**
+**最後更新：2026-06-13**
 **計畫版次：v0.5**
 
 ---
@@ -215,3 +215,6 @@
 | 2026-06-12 | 任務模板庫：20 個內建任務，一鍵帶入表單 |
 | 2026-06-12 | 週/月統計報表：每日趨勢圖、學員排行、4 個指標 |
 | 2026-06-12 | 資料匯出/備份：JSON 完整備份 + CSV 流水帳，全 E2E 53/53 通過 |
+| 2026-06-12 | 學員系統：iOS session 清除問題 → 改用獨立 localStorage (lib/cadetSession.ts)；KID 自動大寫 |
+| 2026-06-12 | 學員任務：完成任務補上 Authorization header；任務/首頁改走 /api/cadet/* admin client |
+| 2026-06-13 | 學員首頁修正：移除 supabase.auth.getUser()（學員不在 auth.users 導致登入後被踢回）→ 改用 getCadetToken() + /api/cadet/home；任務完成錯誤訊息顯示實際原因（err.code → err.error） |
