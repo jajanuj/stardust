@@ -6,7 +6,8 @@ export const metadata: Metadata = {
   title: "StarDuty 星際學院",
   description: "親子任務獎勵系統 — 完成星際任務，賺取星塵，兌換獎勵",
   manifest: "/manifest.json",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "StarDuty" },
+  appleWebApp: { statusBarStyle: "black-translucent", title: "StarDuty" },
+  other: { "mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
