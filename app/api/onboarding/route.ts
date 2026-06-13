@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-const admin = createAdminClient();
 import bcrypt from "bcryptjs";
 
 function generateKidCode(): string {
@@ -14,6 +12,7 @@ function generateKidCode(): string {
 }
 
 export async function POST(req: Request) {
+  const admin = createAdminClient();
   const { userId, familyName, cadetName, cadetAvatar, cadetPin } = await req.json();
 
   if (!userId || !familyName || !cadetName) {
