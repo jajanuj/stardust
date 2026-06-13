@@ -30,13 +30,16 @@ export default function RewardsPage() {
   const [filter, setFilter] = useState<"active" | "inactive">("active");
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace("/login/commander"); return; }
-    const { data: fm } = await supabase.from("family_members").select("family_id").eq("user_id", user.id).single();
-    if (!fm) { setLoading(false); return; }
-    setFamilyId(fm.family_id);
-    const { data } = await supabase.from("rewards").select("*").eq("family_id", fm.family_id).order("created_at", { ascending: false });
-    setRewards(data ?? []);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/login/commander"); return; }
+
+    const res = await fetch("/api/commander/rewards", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setFamilyId(body.familyId ?? null);
+    setRewards(body.rewards ?? []);
     setLoading(false);
   }, [router]);
 

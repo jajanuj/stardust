@@ -20,21 +20,16 @@ export default function ApprovalsPage() {
   const [acting, setActing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace("/login/commander"); return; }
-    setUserId(user.id);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { router.replace("/login/commander"); return; }
+    setUserId(session.user.id);
 
-    const { data: fm } = await supabase.from("family_members").select("family_id").eq("user_id", user.id).single();
-    if (!fm) { setLoading(false); return; }
-
-    const { data } = await supabase
-      .from("task_completions")
-      .select("id,coins_earned,completed_at,tasks(title,icon),children(name,avatar)")
-      .eq("family_id", fm.family_id)
-      .eq("status", "pending")
-      .order("completed_at", { ascending: false });
-
-    setItems((data as unknown as PendingItem[]) ?? []);
+    const res = await fetch("/api/commander/approvals", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setItems((body.items as PendingItem[]) ?? []);
     setLoading(false);
   }, [router]);
 

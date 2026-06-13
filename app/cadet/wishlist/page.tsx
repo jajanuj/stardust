@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
+import { getCadetToken } from "@/lib/cadetSession";
 
 interface WishItem {
   id: string;
@@ -21,36 +21,37 @@ export default function WishlistPage() {
   const router = useRouter();
   const [wishes, setWishes] = useState<WishItem[]>([]);
   const [coins, setCoins] = useState(0);
-  const [childId, setChildId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace("/login/cadet"); return; }
-    const meta = user.user_metadata;
-    const cid = meta?.child_id ?? user.id;
-    setChildId(cid);
-    const { data: child } = await supabase.from("children").select("coins").eq("id", cid).single();
-    setCoins(child?.coins ?? 0);
-    const { data } = await supabase
-      .from("wishlists")
-      .select("id,rewards(id,title,description,coin_cost,is_timed,timer_minutes)")
-      .eq("child_id", cid)
-      .order("created_at", { ascending: false });
-    setWishes((data as unknown as WishItem[]) ?? []);
+    const token = getCadetToken();
+    if (!token) { router.replace("/login/cadet"); return; }
+
+    const res = await fetch("/api/cadet/wishlist", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setCoins(body.coins ?? 0);
+    setWishes((body.wishes as WishItem[]) ?? []);
     setLoading(false);
   }, [router]);
 
   useEffect(() => { load(); }, [load]);
 
   async function removeWish(rewardId: string) {
-    if (!childId || removing) return;
+    if (removing) return;
+    const token = getCadetToken();
+    if (!token) return;
     setRemoving(rewardId);
     await fetch("/api/wishlist/toggle", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ childId, rewardId }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ rewardId }),
     });
     setRemoving(null);
     load();
@@ -100,7 +101,6 @@ export default function WishlistPage() {
                 </button>
               </div>
 
-              {/* 進度條 */}
               <div>
                 <div className="mb-1 flex justify-between text-xs text-slate-500">
                   <span>{canAfford ? "🎉 可以兌換了！" : `還差 ${diff} 星塵`}</span>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { getCadetToken, getCadetInfo, saveCadetSession } from "@/lib/cadetSession";
 
 const CATEGORIES = ["全部", "娛樂", "美食", "體驗", "親子", "其他"];
 
@@ -26,7 +26,6 @@ export default function ShopPage() {
   const router = useRouter();
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [coins, setCoins] = useState(0);
-  const [childId, setChildId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("全部");
   const [confirming, setConfirming] = useState<Reward | null>(null);
@@ -35,38 +34,48 @@ export default function ShopPage() {
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace("/login/cadet"); return; }
-    const meta = user.user_metadata;
-    const cid = meta?.child_id ?? user.id;
-    setChildId(cid);
-    const { data: child } = await supabase.from("children").select("coins,family_id").eq("id", cid).single();
-    if (!child) { setLoading(false); return; }
-    setCoins(child.coins);
-    const { data } = await supabase.from("rewards").select("*").eq("family_id", child.family_id).eq("is_active", true).order("coin_cost");
-    setRewards(data ?? []);
+    const token = getCadetToken();
+    if (!token) { router.replace("/login/cadet"); return; }
+    const cached = getCadetInfo();
+    if (cached) setCoins(cached.coins);
+
+    const res = await fetch("/api/cadet/shop", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setCoins(body.coins ?? 0);
+    setRewards(body.rewards ?? []);
     setLoading(false);
   }, [router]);
 
   useEffect(() => { load(); }, [load]);
 
   async function redeem() {
-    if (!childId || !confirming || redeeming) return;
+    if (!confirming || redeeming) return;
+    const token = getCadetToken();
+    if (!token) { router.replace("/login/cadet"); return; }
     setRedeeming(true);
     setError("");
     const res = await fetch("/api/rewards/redeem", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rewardId: confirming.id, childId }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ rewardId: confirming.id }),
     });
     setRedeeming(false);
     if (!res.ok) {
       const body = await res.json();
-      setError(body.error ?? "兌換失敗");
+      setError(body.message ?? body.error ?? "兌換失敗");
       return;
     }
     const data = await res.json();
     setCoins(data.balance);
+    // 同步 localStorage
+    const info = getCadetInfo();
+    if (info) saveCadetSession(token, { ...info, coins: data.balance });
     setSuccess({ redemption_id: data.redemption_id, balance: data.balance });
     setConfirming(null);
     load();
@@ -86,7 +95,6 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* 分類 tabs */}
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
         {CATEGORIES.map((c) => (
           <button key={c} onClick={() => setCategory(c)}
@@ -133,7 +141,6 @@ export default function ShopPage() {
         })}
       </div>
 
-      {/* 確認 Modal */}
       {confirming && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={() => { setConfirming(null); setError(""); }}>
           <div className="w-full max-w-sm rounded-2xl bg-space-800 p-6" onClick={(e) => e.stopPropagation()}>
@@ -155,7 +162,6 @@ export default function ShopPage() {
         </div>
       )}
 
-      {/* 兌換成功 Modal */}
       {success && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-sm rounded-2xl bg-space-800 p-6 text-center">

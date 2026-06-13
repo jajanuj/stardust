@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { getCadetToken } from "@/lib/cadetSession";
 
 interface Pet {
   id: string;
@@ -27,12 +27,15 @@ export default function PetPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace("/login/cadet"); return; }
-      const meta = user.user_metadata;
-      const cid = meta?.child_id ?? user.id;
-      const { data } = await supabase.from("pets").select("*").eq("child_id", cid).maybeSingle();
-      setPet(data ?? null);
+      const token = getCadetToken();
+      if (!token) { router.replace("/login/cadet"); return; }
+
+      const res = await fetch("/api/cadet/pet", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { setLoading(false); return; }
+      const body = await res.json();
+      setPet(body.pet ?? null);
       setLoading(false);
     }
     load();
@@ -91,7 +94,6 @@ export default function PetPage() {
         )}
       </div>
 
-      {/* 成長階段 */}
       <div className="w-full max-w-xs">
         <p className="mb-3 text-sm font-semibold text-slate-400">成長路徑</p>
         <div className="flex justify-between">

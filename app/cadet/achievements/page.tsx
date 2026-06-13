@@ -2,18 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { getCadetToken } from "@/lib/cadetSession";
 
-interface Achievement {
-  id: string;
-  code: string;
-  title: string;
-  description: string | null;
-  icon: string;
-  unlocked_at: string | null;
-}
-
-const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "unlocked_at">[] = [
+const DEFAULT_ACHIEVEMENTS = [
   { id: "first_task", code: "first_task", title: "初出茅廬", description: "完成第一個任務", icon: "🚀" },
   { id: "10_tasks", code: "10_tasks", title: "任務達人", description: "累計完成 10 個任務", icon: "🏆" },
   { id: "50_tasks", code: "50_tasks", title: "任務大師", description: "累計完成 50 個任務", icon: "🌟" },
@@ -31,21 +22,16 @@ export default function AchievementsPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace("/login/cadet"); return; }
-      const meta = user.user_metadata;
-      const cid = meta?.child_id ?? user.id;
-      const { data } = await supabase
-        .from("child_achievements")
-        .select("achievements(code)")
-        .eq("child_id", cid);
-      const codes = new Set((data ?? []).map((r: { achievements: { code: string }[] | { code: string } | null }) => {
-        const ach = r.achievements;
-        if (!ach) return "";
-        if (Array.isArray(ach)) return ach[0]?.code ?? "";
-        return (ach as { code: string }).code;
-      }));
-      setUnlockedIds(codes);
+      const token = getCadetToken();
+      if (!token) { router.replace("/login/cadet"); return; }
+
+      const res = await fetch("/api/cadet/achievements", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const body = await res.json();
+        setUnlockedIds(new Set(body.unlockedCodes ?? []));
+      }
       setLoading(false);
     }
     load();

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { getCadetToken } from "@/lib/cadetSession";
 
 interface TxItem {
   id: string;
@@ -18,17 +18,15 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace("/login/cadet"); return; }
-    const meta = user.user_metadata;
-    const cid = meta?.child_id ?? user.id;
-    const { data } = await supabase
-      .from("coin_transactions")
-      .select("id,delta,balance_after,reason,created_at")
-      .eq("child_id", cid)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    setTxs(data ?? []);
+    const token = getCadetToken();
+    if (!token) { router.replace("/login/cadet"); return; }
+
+    const res = await fetch("/api/cadet/history", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) { setLoading(false); return; }
+    const body = await res.json();
+    setTxs(body.transactions ?? []);
     setLoading(false);
   }, [router]);
 
