@@ -3,6 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import {
+  getCustomTemplates,
+  saveCustomTemplate,
+  deleteCustomTemplate,
+  type CustomTemplate,
+} from "@/lib/customTemplates";
 
 const TASK_ICONS = ["📚", "🧹", "🍽️", "🛁", "🐕", "🌱", "💪", "🎵", "🏃", "🧘", "🍱", "🛏️", "♻️", "🖊️"];
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -202,8 +208,9 @@ export default function TasksPage() {
         })}
       </div>
 
-      {modal?.type === "templates" && (
+      {modal?.type === "templates" && familyId && (
         <TemplateModal
+          familyId={familyId}
           onSelect={(tpl) => setModal({ type: "add", template: tpl })}
           onClose={() => setModal(null)}
         />
@@ -221,6 +228,7 @@ export default function TasksPage() {
       {modal?.type === "edit" && (
         <TaskFormModal
           cadets={cadets}
+          familyId={familyId ?? undefined}
           task={modal.task}
           onClose={() => setModal(null)}
           onDone={load}
@@ -240,9 +248,33 @@ function TypeBadge({ type, recurDays }: { type: string; recurDays: number[] | nu
   return null;
 }
 
-function TemplateModal({ onSelect, onClose }: { onSelect: (t: TaskTemplate) => void; onClose: () => void }) {
+function typeLabel(t: string) {
+  return t === "once" ? "一次性" : t === "daily" ? "每日" : "每週";
+}
+
+function TemplateModal({ familyId, onSelect, onClose }: { familyId: string; onSelect: (t: TaskTemplate) => void; onClose: () => void }) {
   const [activeCategory, setActiveCategory] = useState(TEMPLATE_CATEGORIES[0]);
+  const [customs, setCustoms] = useState<CustomTemplate[]>([]);
   const filtered = TASK_TEMPLATES.filter((t) => t.category === activeCategory);
+
+  useEffect(() => { setCustoms(getCustomTemplates(familyId)); }, [familyId]);
+
+  function removeCustom(id: string) {
+    deleteCustomTemplate(familyId, id);
+    setCustoms(getCustomTemplates(familyId));
+  }
+
+  function selectCustom(c: CustomTemplate) {
+    onSelect({
+      category: "常用任務",
+      icon: c.icon,
+      title: c.title,
+      description: c.description,
+      coinsReward: c.coinsReward,
+      taskType: c.taskType,
+      recurDays: c.recurDays,
+    });
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center" onClick={onClose}>
@@ -250,6 +282,36 @@ function TemplateModal({ onSelect, onClose }: { onSelect: (t: TaskTemplate) => v
         onClick={(e) => e.stopPropagation()}>
         <h2 className="mb-1 text-lg font-bold">📋 任務模板庫</h2>
         <p className="mb-4 text-sm text-slate-400">選擇模板後可再調整內容</p>
+
+        {/* 常用任務（自訂模板）*/}
+        {customs.length > 0 && (
+          <div className="mb-5">
+            <p className="mb-2 text-sm font-semibold text-stardust">⭐ 常用任務</p>
+            <div className="flex flex-col gap-2">
+              {customs.map((c) => (
+                <div key={c.id}
+                  className="card flex items-center gap-3 border-stardust/30 hover:border-stardust/50 transition">
+                  <button onClick={() => selectCustom(c)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                    <span className="text-2xl">{c.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm">{c.title}</p>
+                      {c.description && <p className="text-xs text-slate-400 line-clamp-1">{c.description}</p>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-bold text-stardust">{c.coinsReward} ⭐</p>
+                      <p className="text-xs text-slate-500">{typeLabel(c.taskType)}</p>
+                    </div>
+                  </button>
+                  <button onClick={() => removeCustom(c.id)} aria-label="刪除常用任務"
+                    className="shrink-0 rounded-lg px-2 py-1 text-slate-500 hover:bg-red-900/30 hover:text-red-400">
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="my-4 border-t border-white/10" />
+          </div>
+        )}
 
         {/* Category tabs */}
         <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
@@ -272,9 +334,7 @@ function TemplateModal({ onSelect, onClose }: { onSelect: (t: TaskTemplate) => v
               </div>
               <div className="text-right shrink-0">
                 <p className="text-xs font-bold text-stardust">{tpl.coinsReward} ⭐</p>
-                <p className="text-xs text-slate-500">
-                  {tpl.taskType === "once" ? "一次性" : tpl.taskType === "daily" ? "每日" : "每週"}
-                </p>
+                <p className="text-xs text-slate-500">{typeLabel(tpl.taskType)}</p>
               </div>
             </button>
           ))}
@@ -311,9 +371,27 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onClose, onDo
   const [requireApproval, setRequireApproval] = useState(task?.require_approval ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [savedTpl, setSavedTpl] = useState(false);
 
   function toggleDay(d: number) {
     setRecurDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort());
+  }
+
+  function saveAsTemplate() {
+    if (!familyId) return;
+    if (!title.trim()) { setError("請先輸入任務名稱再存為常用任務"); return; }
+    if (taskType === "weekly" && recurDays.length === 0) { setError("每週任務請先選擇出現日期"); return; }
+    setError("");
+    saveCustomTemplate(familyId, {
+      icon,
+      title: title.trim(),
+      description: description.trim(),
+      coinsReward,
+      taskType,
+      recurDays: taskType === "weekly" ? recurDays : undefined,
+    });
+    setSavedTpl(true);
+    setTimeout(() => setSavedTpl(false), 2500);
   }
 
   async function submit(e: React.FormEvent) {
@@ -451,6 +529,17 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onClose, onDo
           </label>
 
           {error && <p className="text-sm text-nebula-pink">{error}</p>}
+
+          {/* 存為常用任務 */}
+          {familyId && (
+            <button type="button" onClick={saveAsTemplate}
+              className={`w-full rounded-xl border py-2.5 text-sm transition ${savedTpl
+                ? "border-green-500/50 text-green-400"
+                : "border-stardust/40 text-stardust hover:bg-stardust/10"}`}>
+              {savedTpl ? "✓ 已加入常用任務" : "⭐ 存為常用任務"}
+            </button>
+          )}
+
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-white/10 py-3 text-sm">取消</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">
