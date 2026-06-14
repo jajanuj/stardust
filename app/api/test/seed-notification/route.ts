@@ -11,14 +11,15 @@ export async function POST(req: NextRequest) {
   const cmd = await verifyCommander(req);
   if (!cmd) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { title, body } = await req.json().catch(() => ({}));
+  const { title, body, recipient, childId } = await req.json().catch(() => ({}));
   const admin = createAdminClient();
+  const isCadet = recipient === "cadet";
   const { data, error } = await admin
     .from("notifications")
     .insert({
       family_id: cmd.familyId,
-      recipient_type: "commander",
-      recipient_id: null,
+      recipient_type: isCadet ? "cadet" : "commander",
+      recipient_id: isCadet ? (childId ?? null) : null,
       type: "test",
       title: title ?? "E2E 測試通知",
       body: body ?? null,

@@ -209,8 +209,8 @@
 | templates.spec.ts | 3 | ✅ |
 | coins-adjustment.spec.ts | 6 | ✅ |
 | custom-templates.spec.ts | 3 | ✅ |
-| notifications.spec.ts | 3 | ✅ |
-| **合計** | **65** | **✅ 65/65** |
+| notifications.spec.ts | 4 | ✅ |
+| **合計** | **66** | **✅ 66/66** |
 
 ---
 
@@ -272,4 +272,5 @@
 | 2026-06-13 | 全面移除指揮官頁面直接 supabase.from() 查詢：新增 7 個 /api/commander/* admin client routes（cadets/tasks/fulfill/history/messages/leaderboard/stats），修正所有 console 406/401 錯誤 |
 | 2026-06-14 | 文件校正：README migration 檔名（0004_grants / 0005_ensure_rpc_grants / 0006_custom_templates）與測試目錄（tests → e2e）修正；git remote 更新為 `stardust`（GitHub repo 由 startdust 改名）；PROGRESS 環境設定標記完成、待上線清單 migration 數(3→6)/金鑰數(6→7) 校正 |
 | 2026-06-14 | 開發工具：導入 CodeGraph（程式碼知識圖譜 MCP）— 全域安裝 + 本專案索引（92 檔 / 549 節點）；`.codegraph/` 加入 .gitignore；調整全域 CLAUDE.md 使用措辭。MCP 工具需完整重啟 Claude Code 才載入，shell 路徑即時可用（見「開發工具」段） |
-| 2026-06-14 | 新功能：站內通知中心（補 Phase 3 缺口）— `lib/notifications.ts` helper；完成待審任務/兌換→通知指揮官，核可/退回→通知學員；`/api/commander/notifications`、`/api/cadet/notifications`（GET 列表+未讀數、PATCH 已讀）；指揮官/學員 header 鈴鐺未讀徽章 + 通知頁。E2E notifications.spec.ts 3/3（dev seed 端點 + afterEach 清理），全測試 65/65 |
+| 2026-06-14 | 新功能：站內通知中心（補 Phase 3 缺口）— `lib/notifications.ts` helper；完成待審任務/兌換→通知指揮官，核可/退回→通知學員；`/api/commander/notifications`、`/api/cadet/notifications`（GET 列表+未讀數、PATCH 已讀）；指揮官/學員 header 鈴鐺未讀徽章 + 通知頁。E2E notifications.spec.ts（含學員側）+ dev seed/cadet-token 端點 |
+| 2026-06-14 | E2E 測試基建強化：`_auth.ts` 加 commander session 快取（一個 worker 只產一次 magic link）+ 取不到 token 自動重試，根治 Supabase magic-link 限流 flakiness；新增 `loginAsCadet` helper（dev `/api/test/cadet-token` 簽學員 JWT）並補學員側通知 E2E；coins-adjustment 改用共用 `_auth`。全測試 66/66 穩定 |
