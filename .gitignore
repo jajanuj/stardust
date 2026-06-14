@@ -34,3 +34,6 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# codegraph（本機程式碼索引，不進版控）
+/.codegraph/
