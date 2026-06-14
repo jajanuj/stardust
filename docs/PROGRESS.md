@@ -3,7 +3,7 @@
 > 這是進度的單一真相來源(single source of truth)。每次交付一段功能/頁面/修正後固定更新此檔。
 > 設計細節見 [`StarDuty-plan.md`](./StarDuty-plan.md)。
 
-**最後更新：2026-06-13（常用任務 DB 版完成）**
+**最後更新：2026-06-14（CodeGraph 開發工具導入；進度內容校正）**
 **計畫版次：v0.5**
 
 ---
@@ -13,7 +13,7 @@
 | 階段 | 範圍 | 狀態 |
 |------|------|------|
 | Phase 0 | 基礎建設（骨架、DB、驗證、核心 API） | ✅ 完成 |
-| 環境設定 | 金鑰填寫、本機建置、跑 migration | 🔄 進行中 |
+| 環境設定 | 金鑰填寫、本機建置、跑 migration | ✅ 完成 |
 | Phase 1 | MVP 核心（Onboarding、學員/任務管理、任務列表、待審核、Cron） | ✅ 完成 |
 | Phase 2 | 商城與獎勵（商城、兌換、待兌現、心願清單、計時器、流水帳） | ✅ 完成 |
 | Phase 3 | 遊戲化與體驗優化（寵物、成就、留言、PWA） | ✅ 完成 |
@@ -38,13 +38,13 @@
 
 ---
 
-## 環境設定 🔄
+## 環境設定 ✅
 
 - [x] `.env.local` 建立
 - [x] `npm install`（本機）
-- [ ] 三把金鑰確認填妥：`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`SUPABASE_JWT_SECRET`
-- [ ] Supabase SQL Editor 依序執行 `0001` → `0002` → `0003`
-- [ ] `npm run dev` 本機驗證登入流程
+- [x] 金鑰填妥：`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`SUPABASE_JWT_SECRET`
+- [x] Supabase SQL Editor 執行 migration `0001` → `0006`
+- [x] `npm run dev` 本機驗證登入流程（指揮官 + 學員皆通過，E2E 62/62）
 
 > 驗證機制決議：採方案 A（學員自簽 HS256 JWT + RLS）。**切勿 revoke Legacy JWT Secret**，否則學員登入失效。
 
@@ -210,12 +210,26 @@
 
 ---
 
+## 開發工具
+
+### CodeGraph（程式碼知識圖譜 MCP）
+預先索引整個 codebase 的符號與呼叫關係，查程式碼免逐檔 grep/read，省 token。
+
+- **安裝狀態**：全域安裝 `@colbymchenry/codegraph` v1.0.1；MCP 設定寫入 `~/.claude.json`、唯讀工具自動允許寫入 `~/.claude/settings.json`、全域 `~/.claude/CLAUDE.md` 加使用指引（措辭已調整）。本專案已 `codegraph init`（92 檔 / 549 節點），`.codegraph/` 已列入 `.gitignore`（不進版控）。
+- **兩條使用路徑**：
+  - **Shell（永遠可用）**：`codegraph explore "<問題或符號>"`、`codegraph callers <符號>`、`codegraph impact <符號>`、`codegraph status`
+  - **MCP 工具（`mcp__codegraph__*`）**：需 Claude Code **完整重啟程式**後才載入；可用「恢復/繼續對話」保留記憶同時掛上 MCP。沿用舊對話不會重新初始化 MCP。
+- **注意**：索引落後寫入約 1 秒（檔案 watcher 自動同步）；結果若疑似過期用 `codegraph sync` 或改用 Read 核對。
+- **移除**：`codegraph uninstall`；全域 CLAUDE.md 內含 `CODEGRAPH_START/END` 標記可一併清除。
+
+---
+
 ## 待上線前必做
 
-1. Supabase Dashboard 執行三個 migration SQL
-2. Vercel 環境變數設定（6 個金鑰）
+1. Supabase Dashboard 執行六個 migration SQL（`0001`–`0006`）
+2. Vercel 環境變數設定（7 個金鑰，含 `CRON_SECRET`）
 3. 自訂網域 `starduty.app` DNS 設定
-4. 上傳 PWA 圖示（`/public/icon-192.png`、`/public/icon-512.png`）
+4. PWA 圖示：目前 manifest 用 `public/icon.svg`；如需點陣圖示可另上傳 `icon-192/512.png`
 5. 生成 VAPID 金鑰（`npx web-push generate-vapid-keys`）並填入環境變數
 
 ---
@@ -250,3 +264,5 @@
 | 2026-06-13 | 指揮官首頁/審核/獎勵修正：新增 /api/commander/home（admin client），改走 getUser() → getSession() 取得新鮮 token，修正學員數顯示0、待審核顯示0、新增獎勵按鈕無效 3 個問題 |
 | 2026-06-13 | 任務頁星塵顯示改從 DB 讀取：/api/cadet/tasks 加上 coins 回傳，修正指揮官核可後餘額不同步問題 |
 | 2026-06-13 | 全面移除指揮官頁面直接 supabase.from() 查詢：新增 7 個 /api/commander/* admin client routes（cadets/tasks/fulfill/history/messages/leaderboard/stats），修正所有 console 406/401 錯誤 |
+| 2026-06-14 | 文件校正：README migration 檔名（0004_grants / 0005_ensure_rpc_grants / 0006_custom_templates）與測試目錄（tests → e2e）修正；git remote 更新為 `stardust`（GitHub repo 由 startdust 改名）；PROGRESS 環境設定標記完成、待上線清單 migration 數(3→6)/金鑰數(6→7) 校正 |
+| 2026-06-14 | 開發工具：導入 CodeGraph（程式碼知識圖譜 MCP）— 全域安裝 + 本專案索引（92 檔 / 549 節點）；`.codegraph/` 加入 .gitignore；調整全域 CLAUDE.md 使用措辭。MCP 工具需完整重啟 Claude Code 才載入，shell 路徑即時可用（見「開發工具」段） |
