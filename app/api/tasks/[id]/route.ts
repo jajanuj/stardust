@@ -15,6 +15,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (body.status !== undefined) updates.status = body.status;
   if (body.recurDays !== undefined) updates.recur_days = body.recurDays;
   if (body.resetHour !== undefined) updates.reset_hour = body.resetHour;
+  if (body.isShared !== undefined) {
+    updates.is_shared = !!body.isShared && !body.assignedTo;
+    if (updates.is_shared) updates.require_approval = false; // 搶單一律即時入帳
+  }
 
   const { data, error } = await admin
     .from("tasks")

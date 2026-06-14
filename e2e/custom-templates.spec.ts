@@ -30,8 +30,8 @@ test.describe("常用任務（自訂模板）", () => {
     await page.locator("button", { hasText: "📋 模板" }).click();
     await expect(page.locator("text=任務模板庫")).toBeVisible({ timeout: 5000 });
 
-    // 一開始沒有常用任務區塊
-    await expect(page.locator("text=⭐ 常用任務")).toHaveCount(0);
+    // 一開始不應有我們這次的測試模板（家庭可能已有其他真實常用任務，故不假設整區為空）
+    await expect(page.locator(`text=${UNIQUE_TITLE}`)).toHaveCount(0);
 
     // 點第一個內建模板（居家整潔 → 整理床舖）
     await page.locator("button", { hasText: "整理床舖" }).first().click();
@@ -71,11 +71,12 @@ test.describe("常用任務（自訂模板）", () => {
     await page.locator("button", { hasText: "取消" }).click();
     await page.locator("button", { hasText: "📋 模板" }).click();
     await expect(page.locator(`text=${UNIQUE_TITLE}`)).toBeVisible({ timeout: 5000 });
-    await page.locator('button[aria-label="刪除常用任務"]').first().click();
+    // 只刪自己這筆（用卡片範圍鎖定，不動到家庭既有的常用任務）
+    await page.locator(".card", { hasText: UNIQUE_TITLE })
+      .locator('button[aria-label="刪除常用任務"]').click();
 
-    // 刪除後常用任務消失
+    // 刪除後我們這筆消失
     await expect(page.locator(`text=${UNIQUE_TITLE}`)).toHaveCount(0);
-    await expect(page.locator("text=⭐ 常用任務")).toHaveCount(0);
   });
 
   test("常用任務在頁面重新整理後仍存在", async ({ page }) => {
@@ -101,8 +102,9 @@ test.describe("常用任務（自訂模板）", () => {
     await page.locator("button", { hasText: "📋 模板" }).click();
     await expect(page.locator(`text=${title}`)).toBeVisible({ timeout: 5000 });
 
-    // 清理
-    await page.locator('button[aria-label="刪除常用任務"]').first().click();
+    // 清理（只刪自己這筆；afterEach 也會兜底刪 E2E 前綴）
+    await page.locator(".card", { hasText: title })
+      .locator('button[aria-label="刪除常用任務"]').click();
   });
 
   test("空白名稱時存為常用任務會擋下並提示", async ({ page }) => {

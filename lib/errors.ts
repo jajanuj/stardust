@@ -4,6 +4,7 @@ const MAP: Record<string, { status: number; message: string }> = {
   not_assigned: { status: 403, message: "這個任務不是指派給你的" },
   child_not_found: { status: 404, message: "找不到學員" },
   already_completed_today: { status: 409, message: "今天已經完成過囉" },
+  already_claimed: { status: 409, message: "這個任務已經被搶走囉" },
   reward_not_found: { status: 404, message: "找不到獎勵" },
   insufficient_coins: { status: 400, message: "星塵不足" },
   out_of_stock: { status: 409, message: "獎勵已兌完" },

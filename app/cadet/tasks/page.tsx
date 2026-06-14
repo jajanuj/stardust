@@ -15,13 +15,15 @@ interface Task {
   task_type: string;
   recur_days: number[] | null;
   require_approval: boolean;
+  is_shared: boolean;
   status: string;
-  task_completions: { id: string; status: string; completion_date: string }[];
+  task_completions: { id: string; status: string; completion_date: string; child_id: string; claimer_name?: string }[];
 }
 
 interface CompletionResult {
   status: "approved" | "pending";
   balance: number;
+  shared?: boolean;
 }
 
 export default function CadetTasksPage() {
@@ -72,14 +74,26 @@ export default function CadetTasksPage() {
 
   function isTaskDoneToday(task: Task): boolean {
     const completions = task.task_completions ?? [];
+    // 搶單任務：API 已只回當日紀錄；只要有人搶到就算「今日已完成」
+    if (task.is_shared) return completions.length > 0;
     if (task.task_type === "once") return completions.some((c) => c.status === "approved" || c.status === "pending");
     return completions.some((c) => c.completion_date === todayStr);
+  }
+
+  // 搶單任務的當日認領資訊：是不是我搶的、被誰搶的
+  function sharedClaim(task: Task): { mine: boolean; name: string } | null {
+    if (!task.is_shared) return null;
+    const c = (task.task_completions ?? [])[0];
+    if (!c) return null;
+    return { mine: c.child_id === childId, name: c.claimer_name ?? "某人" };
   }
 
   function shouldShowTask(task: Task): boolean {
     if (task.task_type === "weekly") {
       return (task.recur_days ?? []).includes(todayDay);
     }
+    // 搶單任務一律顯示（被搶走也要看到「已被○○完成」）
+    if (task.is_shared) return true;
     if (task.task_type === "once") {
       return !isTaskDoneToday(task);
     }
@@ -102,7 +116,10 @@ export default function CadetTasksPage() {
     setCompleting(null);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      if (err.error === "already_completed_today" || err.message?.includes("already_completed_today")) {
+      if (err.error === "already_claimed" || err.message?.includes("already_claimed")) {
+        showToast("這個任務已經被搶走囉！", "info");
+        load(); // 重新整理顯示「已被○○完成」
+      } else if (err.error === "already_completed_today" || err.message?.includes("already_completed_today")) {
         showToast("今天已完成過囉！", "info");
       } else if (res.status === 401) {
         // token 失效，重新登入
@@ -121,7 +138,8 @@ export default function CadetTasksPage() {
       // 同步更新 localStorage 內的 coins
       const info = getCadetInfo();
       if (info) saveCadetSession(getCadetToken()!, { ...info, coins: result.balance });
-      showToast(`🌟 +${tasks.find((t) => t.id === taskId)?.coins_reward ?? ""} 星塵！`, "success");
+      const reward = tasks.find((t) => t.id === taskId)?.coins_reward ?? "";
+      showToast(result.shared ? `🏃 搶到了！+${reward} 星塵！` : `🌟 +${reward} 星塵！`, "success");
     }
     load();
   }
@@ -187,8 +205,11 @@ export default function CadetTasksPage() {
               const isPending = (task.task_completions ?? []).some((c) =>
                 (task.task_type === "once" || c.completion_date === todayStr) && c.status === "pending"
               );
+              const claim = sharedClaim(task);
+              const claimedLabel = claim && !claim.mine ? `已被 ${claim.name} 完成` : undefined;
               return (
-                <TaskCard key={task.id} task={task} done={true} isPending={isPending} completing={false} />
+                <TaskCard key={task.id} task={task} done={true} isPending={isPending}
+                  claimedLabel={claimedLabel} completing={false} />
               );
             })}
           </div>
@@ -198,10 +219,11 @@ export default function CadetTasksPage() {
   );
 }
 
-function TaskCard({ task, done, isPending, completing, onComplete }: {
+function TaskCard({ task, done, isPending, claimedLabel, completing, onComplete }: {
   task: Task;
   done: boolean;
   isPending?: boolean;
+  claimedLabel?: string;
   completing: boolean;
   onComplete?: () => void;
 }) {
@@ -213,6 +235,8 @@ function TaskCard({ task, done, isPending, completing, onComplete }: {
         {task.description && <p className="text-xs text-slate-400 line-clamp-1">{task.description}</p>}
         <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
           <span className="text-stardust">⭐ {task.coins_reward}</span>
+          {task.is_shared && !done && <span className="text-nebula-cyan">🏃 搶單</span>}
+          {claimedLabel && <span className="text-nebula-pink">{claimedLabel}</span>}
           {task.require_approval && !done && <span className="text-amber-400">需審核</span>}
           {isPending && <span className="text-amber-400">等待審核中…</span>}
           {task.task_type === "daily" && <span>每日任務</span>}
@@ -232,8 +256,9 @@ function TaskCard({ task, done, isPending, completing, onComplete }: {
           {completing ? "⏳" : "✓"}
         </button>
       )}
-      {done && !isPending && <span className="text-xl">✅</span>}
-      {done && isPending && <span className="text-xl">⏳</span>}
+      {done && claimedLabel && <span className="text-xl">🙅</span>}
+      {done && !claimedLabel && !isPending && <span className="text-xl">✅</span>}
+      {done && !claimedLabel && isPending && <span className="text-xl">⏳</span>}
     </div>
   );
 }

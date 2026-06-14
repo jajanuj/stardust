@@ -60,6 +60,7 @@ interface Task {
   recur_days: number[] | null;
   reset_hour: number;
   require_approval: boolean;
+  is_shared: boolean;
   status: string;
   assigned_to: string | null;
 }
@@ -214,6 +215,7 @@ export default function TasksPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold">{t.title}</span>
                   <TypeBadge type={t.task_type} recurDays={t.recur_days} />
+                  {t.is_shared && <span className="rounded bg-cyan-900/40 px-1.5 py-0.5 text-xs text-nebula-cyan">🏃 搶單</span>}
                   {t.require_approval && <span className="rounded bg-amber-900/40 px-1.5 py-0.5 text-xs text-amber-400">需審核</span>}
                 </div>
                 {t.description && <p className="mt-1 text-xs text-slate-400 line-clamp-1">{t.description}</p>}
@@ -406,6 +408,7 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onSaveTemplat
   const [resetHour, setResetHour] = useState(task?.reset_hour ?? 6);
   const [assignedTo, setAssignedTo] = useState<string>(task?.assigned_to ?? "");
   const [requireApproval, setRequireApproval] = useState(task?.require_approval ?? false);
+  const [isShared, setIsShared] = useState(task?.is_shared ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [savedTpl, setSavedTpl] = useState(false);
@@ -448,6 +451,7 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onSaveTemplat
         body: JSON.stringify({
           title: title.trim(), description: description.trim() || null, icon,
           coinsReward, requireApproval, assignedTo: assignedTo || null,
+          isShared: !assignedTo && isShared,
           recurDays: taskType === "weekly" ? recurDays : null,
           resetHour: taskType === "daily" ? resetHour : 6,
         }),
@@ -464,6 +468,7 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onSaveTemplat
           recurDays: taskType === "weekly" ? recurDays : null,
           resetHour: taskType === "daily" ? resetHour : 6,
           assignedTo: assignedTo || null, requireApproval,
+          isShared: !assignedTo && isShared,
         }),
       });
       setLoading(false);
@@ -554,20 +559,35 @@ function TaskFormModal({ cadets, task, template, familyId, userId, onSaveTemplat
           {/* 指派 */}
           <label className="flex flex-col gap-1 text-sm">
             指派給
-            <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="input">
+            <select value={assignedTo}
+              onChange={(e) => { setAssignedTo(e.target.value); if (e.target.value) setIsShared(false); }}
+              className="input">
               <option value="">所有學員</option>
               {cadets.map((c) => <option key={c.id} value={c.id}>{c.avatar} {c.name}</option>)}
             </select>
           </label>
 
-          {/* 需審核 */}
-          <label className="flex cursor-pointer items-center gap-3 text-sm">
-            <div className={`relative h-6 w-11 rounded-full transition ${requireApproval ? "bg-nebula-purple" : "bg-space-700"}`}
-              onClick={() => setRequireApproval(!requireApproval)}>
-              <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${requireApproval ? "left-5" : "left-0.5"}`} />
-            </div>
-            <span>需指揮官審核才入帳</span>
-          </label>
+          {/* 搶單（僅「所有學員」適用）*/}
+          {!assignedTo && (
+            <label className="flex cursor-pointer items-start gap-3 text-sm">
+              <div className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${isShared ? "bg-nebula-cyan" : "bg-space-700"}`}
+                onClick={() => { const v = !isShared; setIsShared(v); if (v) setRequireApproval(false); }}>
+                <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${isShared ? "left-5" : "left-0.5"}`} />
+              </div>
+              <span>🏃 搶單（一人完成即可・先搶先贏）<br /><span className="text-xs text-slate-400">適合倒垃圾這種一天只需一人做的家事；一律即時入帳</span></span>
+            </label>
+          )}
+
+          {/* 需審核（搶單一律即時入帳，故隱藏）*/}
+          {!isShared && (
+            <label className="flex cursor-pointer items-center gap-3 text-sm">
+              <div className={`relative h-6 w-11 rounded-full transition ${requireApproval ? "bg-nebula-purple" : "bg-space-700"}`}
+                onClick={() => setRequireApproval(!requireApproval)}>
+                <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${requireApproval ? "left-5" : "left-0.5"}`} />
+              </div>
+              <span>需指揮官審核才入帳</span>
+            </label>
+          )}
 
           {error && <p className="text-sm text-nebula-pink">{error}</p>}
 

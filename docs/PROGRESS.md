@@ -43,7 +43,7 @@
 - [x] `.env.local` 建立
 - [x] `npm install`（本機）
 - [x] 金鑰填妥：`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`SUPABASE_JWT_SECRET`
-- [x] Supabase SQL Editor 執行 migration `0001` → `0006`
+- [x] Supabase SQL Editor 執行 migration `0001` → `0007`
 - [x] `npm run dev` 本機驗證登入流程（指揮官 + 學員皆通過，E2E 62/62）
 
 > 驗證機制決議：採方案 A（學員自簽 HS256 JWT + RLS）。**切勿 revoke Legacy JWT Secret**，否則學員登入失效。
@@ -56,7 +56,7 @@
 - [x] 指揮官共用 Layout（底部導航：首頁/學員/任務/待審核/獎勵/待兌現/留言）
 - [x] 指揮官首頁：統計卡片 + 快捷連結
 - [x] 指揮官：學員管理（`/commander/cadets`：新增/編輯/停用/重設PIN/登入卡）
-- [x] 指揮官：任務管理（`/commander/tasks`：一次性/每日/週期、審核開關、封存恢復）
+- [x] 指揮官：任務管理（`/commander/tasks`：一次性/每日/週期、審核開關、封存恢復、🏃 搶單共用任務）
 - [x] 學員共用 Layout（底部導航：首頁/任務/商城/寵物/歷程）
 - [x] 學員首頁（`/cadet`：星塵餘額、今日進度條）
 - [x] 學員：任務列表（`/cadet/tasks`：completion_date 判定、勾選完成、toast）
@@ -210,7 +210,8 @@
 | coins-adjustment.spec.ts | 6 | ✅ |
 | custom-templates.spec.ts | 3 | ✅ |
 | notifications.spec.ts | 4 | ✅ |
-| **合計** | **66** | **✅ 66/66** |
+| shared-tasks.spec.ts | 2 | ✅ |
+| **合計** | **68** | **✅ 68/68** |
 
 ---
 
@@ -249,7 +250,7 @@
 
 ## 待上線前必做
 
-1. Supabase Dashboard 執行六個 migration SQL（`0001`–`0006`）
+1. Supabase Dashboard 執行七個 migration SQL（`0001`–`0007`）
 2. Vercel 環境變數設定（7 個金鑰，含 `CRON_SECRET`）
 3. 自訂網域 `starduty.app` DNS 設定
 4. PWA 圖示：目前 manifest 用 `public/icon.svg`；如需點陣圖示可另上傳 `icon-192/512.png`
@@ -291,3 +292,4 @@
 | 2026-06-14 | 開發工具：導入 CodeGraph（程式碼知識圖譜 MCP）— 全域安裝 + 本專案索引（92 檔 / 549 節點）；`.codegraph/` 加入 .gitignore；調整全域 CLAUDE.md 使用措辭。MCP 工具需完整重啟 Claude Code 才載入，shell 路徑即時可用（見「開發工具」段） |
 | 2026-06-14 | 新功能：站內通知中心（補 Phase 3 缺口）— `lib/notifications.ts` helper；完成待審任務/兌換→通知指揮官，核可/退回→通知學員；`/api/commander/notifications`、`/api/cadet/notifications`（GET 列表+未讀數、PATCH 已讀）；指揮官/學員 header 鈴鐺未讀徽章 + 通知頁。E2E notifications.spec.ts（含學員側）+ dev seed/cadet-token 端點 |
 | 2026-06-14 | E2E 測試基建強化：`_auth.ts` 加 commander session 快取（一個 worker 只產一次 magic link）+ 取不到 token 自動重試，根治 Supabase magic-link 限流 flakiness；新增 `loginAsCadet` helper（dev `/api/test/cadet-token` 簽學員 JWT）並補學員側通知 E2E；coins-adjustment 改用共用 `_auth`。全測試 66/66 穩定 |
+| 2026-06-14 | 新功能：搶單制共用任務（先搶先得，只發一次）— migration 0007 加 `tasks.is_shared`／`task_completions.is_shared` + 部分唯一索引（同任務同日跨學員互斥）；改寫 `complete_task` RPC 加搶單分支（即時入帳、`already_claimed` 防重複）；任務表單「🏃 搶單」開關（僅所有學員）、列表徽章；學員端被搶走顯示「已被○○完成」灰掉。E2E shared-tasks.spec.ts 2/2（兩人搶只一人成功＋一般任務兩人都成功）。另修正 custom-templates 測試過度斷言（不再假設家庭無既有常用任務、刪除鎖定自己那筆）。全測試 68/68 |
