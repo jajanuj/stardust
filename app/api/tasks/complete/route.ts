@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyCadet } from "@/lib/auth/verifyCadet";
 import { mapRpcError } from "@/lib/errors";
+import { notifyCommander } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 
@@ -36,5 +37,20 @@ export async function POST(req: Request) {
     const e = mapRpcError(error.message);
     return NextResponse.json({ error: error.message, message: e.message }, { status: e.status });
   }
+
+  // 需審核任務完成 → 通知指揮官待審核
+  if (data?.status === "pending") {
+    const [{ data: child }, { data: task }] = await Promise.all([
+      admin.from("children").select("name").eq("id", cadet.childId).single(),
+      admin.from("tasks").select("title").eq("id", taskId).single(),
+    ]);
+    await notifyCommander(admin, cadet.familyId, {
+      type: "approval_needed",
+      title: "有任務待審核",
+      body: `${child?.name ?? "學員"} 完成了「${task?.title ?? "任務"}」，等待你核可`,
+      refId: taskId,
+    });
+  }
+
   return NextResponse.json(data);
 }

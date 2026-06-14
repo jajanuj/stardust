@@ -3,7 +3,7 @@
 > 這是進度的單一真相來源(single source of truth)。每次交付一段功能/頁面/修正後固定更新此檔。
 > 設計細節見 [`StarDuty-plan.md`](./StarDuty-plan.md)。
 
-**最後更新：2026-06-14（CodeGraph 開發工具導入；進度內容校正）**
+**最後更新：2026-06-14（站內通知中心完成）**
 **計畫版次：v0.5**
 
 ---
@@ -84,6 +84,7 @@
 - [x] 學員：成就徽章頁（`/cadet/achievements`：8 成就定義）
 - [x] 學員：計時器（圓形動畫倒數）
 - [x] 指揮官：留言板（`/commander/messages`：發送/刪除、指定學員/過期時間）
+- [x] 站內通知中心（`/commander/notifications`、`/cadet/notifications`）：header 鈴鐺未讀徽章 + 通知頁 + 全部已讀；完成待審/兌換→指揮官，核可/退回→學員自動建立通知
 - [x] PWA：`manifest.json`（standalone）+ `sw.js`（離線快取 + push 支援）
 - [x] `app/layout.tsx`：appleWebApp meta + Service Worker 自動注冊
 
@@ -120,6 +121,7 @@
 | `/commander/history` | ✅ 歷史紀錄 |
 | `/commander/leaderboard` | ✅ 排行榜 |
 | `/commander/stats` | ✅ 統計報表（週/月趨勢圖） |
+| `/commander/notifications` | ✅ 通知中心 |
 
 ### 學員 `/cadet/*`
 | 路由 | 狀態 |
@@ -132,6 +134,7 @@
 | `/cadet/history` | ✅ 流水帳 |
 | `/cadet/pet` | ✅ 寵物 |
 | `/cadet/achievements` | ✅ 成就 |
+| `/cadet/notifications` | ✅ 通知中心 |
 
 ### 公共
 | 路由 | 狀態 |
@@ -186,6 +189,8 @@
 | `/api/commander/stats` | 統計報表（admin client） | ✅ |
 | `/api/commander/templates` | 常用任務 GET/POST（admin client） | ✅ |
 | `/api/commander/templates/[id]` | 常用任務 DELETE（admin client） | ✅ |
+| `/api/commander/notifications` | 指揮官通知 GET（列表+未讀）/PATCH（已讀） | ✅ |
+| `/api/cadet/notifications` | 學員通知 GET（列表+未讀）/PATCH（已讀） | ✅ |
 
 ---
 
@@ -204,7 +209,8 @@
 | templates.spec.ts | 3 | ✅ |
 | coins-adjustment.spec.ts | 6 | ✅ |
 | custom-templates.spec.ts | 3 | ✅ |
-| **合計** | **62** | **✅ 62/62** |
+| notifications.spec.ts | 3 | ✅ |
+| **合計** | **65** | **✅ 65/65** |
 
 ---
 
@@ -266,3 +272,4 @@
 | 2026-06-13 | 全面移除指揮官頁面直接 supabase.from() 查詢：新增 7 個 /api/commander/* admin client routes（cadets/tasks/fulfill/history/messages/leaderboard/stats），修正所有 console 406/401 錯誤 |
 | 2026-06-14 | 文件校正：README migration 檔名（0004_grants / 0005_ensure_rpc_grants / 0006_custom_templates）與測試目錄（tests → e2e）修正；git remote 更新為 `stardust`（GitHub repo 由 startdust 改名）；PROGRESS 環境設定標記完成、待上線清單 migration 數(3→6)/金鑰數(6→7) 校正 |
 | 2026-06-14 | 開發工具：導入 CodeGraph（程式碼知識圖譜 MCP）— 全域安裝 + 本專案索引（92 檔 / 549 節點）；`.codegraph/` 加入 .gitignore；調整全域 CLAUDE.md 使用措辭。MCP 工具需完整重啟 Claude Code 才載入，shell 路徑即時可用（見「開發工具」段） |
+| 2026-06-14 | 新功能：站內通知中心（補 Phase 3 缺口）— `lib/notifications.ts` helper；完成待審任務/兌換→通知指揮官，核可/退回→通知學員；`/api/commander/notifications`、`/api/cadet/notifications`（GET 列表+未讀數、PATCH 已讀）；指揮官/學員 header 鈴鐺未讀徽章 + 通知頁。E2E notifications.spec.ts 3/3（dev seed 端點 + afterEach 清理），全測試 65/65 |

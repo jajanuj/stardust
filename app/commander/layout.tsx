@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
@@ -18,6 +19,22 @@ const NAV = [
 export default function CommanderLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch("/api/commander/notifications", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) return;
+      const body = await res.json();
+      if (!cancelled) setUnread(body.unread ?? 0);
+    })();
+    return () => { cancelled = true; };
+  }, [pathname]);
 
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -29,15 +46,29 @@ export default function CommanderLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-10 border-b border-white/10 bg-space-900/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <span className="font-black text-stardust-glow">StarDuty</span>
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              router.push("/");
-            }}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-400 hover:text-white"
-          >
-            登出
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/commander/notifications"
+              aria-label="通知"
+              className="relative rounded-lg border border-white/10 px-2.5 py-1.5 text-base hover:bg-space-700"
+            >
+              🔔
+              {unread > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-nebula-pink px-1 text-[10px] font-bold text-white">
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push("/");
+              }}
+              className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+            >
+              登出
+            </button>
+          </div>
         </div>
       </header>
 
