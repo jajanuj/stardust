@@ -100,6 +100,14 @@ export default function CommanderHome() {
           </div>
           <span className="ml-auto text-slate-600">›</span>
         </Link>
+        <Link href="/commander/family" className="card flex items-center gap-4 hover:border-nebula-purple/40 transition">
+          <span className="text-3xl">👨‍👩‍👧</span>
+          <div>
+            <p className="font-semibold">家庭與指揮官</p>
+            <p className="text-xs text-slate-400">邀請另一位家長共同管理</p>
+          </div>
+          <span className="ml-auto text-slate-600">›</span>
+        </Link>
         <ExportCard />
       </div>
     </div>

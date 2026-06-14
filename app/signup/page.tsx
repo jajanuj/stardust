@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
-type Step = "account" | "family" | "cadet" | "card";
+type Step = "account" | "family" | "cadet" | "card" | "join";
 
 const AVATARS = ["🧑‍🚀", "👩‍🚀", "🦸", "🦸‍♀️", "🐱", "🐶", "🦊", "🐼", "🐸", "🦄"];
 
@@ -24,6 +24,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [joinMode, setJoinMode] = useState(false); // 受邀加入既有家庭
+  const [inviteCode, setInviteCode] = useState("");
 
   // step: family
   const [familyName, setFamilyName] = useState("");
@@ -62,7 +64,35 @@ export default function SignupPage() {
     }
     // 儲存至 sessionStorage，防止 email 確認/頁面重整造成 session 消失
     if (data.user?.id) saveUserId(data.user.id);
-    setStep("family");
+    setStep(joinMode ? "join" : "family");
+  }
+
+  async function handleJoin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inviteCode.trim()) { setError("請輸入邀請碼"); return; }
+    setError("");
+    setLoading(true);
+
+    let userId: string | null = loadUserId();
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    }
+    if (!userId) { setError("登入狀態遺失，請重新整理"); setLoading(false); return; }
+
+    const res = await fetch("/api/family/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, code: inviteCode.trim().toUpperCase() }),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "加入失敗，請確認邀請碼");
+      return;
+    }
+    try { sessionStorage.removeItem("_sd_signup_uid"); } catch {}
+    router.push("/commander");
   }
 
   async function handleFamily(e: React.FormEvent) {
@@ -120,8 +150,8 @@ export default function SignupPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-10">
-      {/* 步驟指示器 */}
-      <StepIndicator current={step} />
+      {/* 步驟指示器（加入家庭流程不顯示）*/}
+      {step !== "join" && <StepIndicator current={step} />}
 
       {step === "account" && (
         <>
@@ -161,6 +191,15 @@ export default function SignupPage() {
                 required
               />
             </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={joinMode}
+                onChange={(e) => setJoinMode(e.target.checked)}
+                className="h-4 w-4 accent-nebula-purple"
+              />
+              我有邀請碼（加入另一位家長已建立的家庭）
+            </label>
             {error && <p className="text-sm text-nebula-pink">{error}</p>}
             <button type="submit" disabled={loading} className="btn-primary">
               {loading ? "建立中…" : "下一步 →"}
@@ -197,6 +236,36 @@ export default function SignupPage() {
             </label>
             {error && <p className="text-sm text-nebula-pink">{error}</p>}
             <button type="submit" className="btn-primary">下一步 →</button>
+          </form>
+        </>
+      )}
+
+      {step === "join" && (
+        <>
+          <div className="text-center">
+            <span className="text-5xl">🤝</span>
+            <h1 className="mt-3 text-2xl font-bold">加入家庭</h1>
+            <p className="mt-1 text-sm text-slate-400">輸入另一位家長給你的邀請碼</p>
+          </div>
+          <form onSubmit={handleJoin} className="card flex flex-col gap-4">
+            <label className="flex flex-col gap-1 text-sm">
+              邀請碼
+              <input
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                type="text"
+                className="input text-center font-mono text-xl tracking-[0.2em]"
+                placeholder="XXXXXXXX"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                required
+              />
+            </label>
+            {error && <p className="text-sm text-nebula-pink">{error}</p>}
+            <button type="submit" disabled={loading} className="btn-primary">
+              {loading ? "加入中…" : "加入家庭 🚀"}
+            </button>
           </form>
         </>
       )}

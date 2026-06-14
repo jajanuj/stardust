@@ -43,7 +43,7 @@
 - [x] `.env.local` 建立
 - [x] `npm install`（本機）
 - [x] 金鑰填妥：`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`SUPABASE_JWT_SECRET`
-- [x] Supabase SQL Editor 執行 migration `0001` → `0007`
+- [x] Supabase SQL Editor 執行 migration `0001` → `0008`
 - [x] `npm run dev` 本機驗證登入流程（指揮官 + 學員皆通過，E2E 62/62）
 
 > 驗證機制決議：採方案 A（學員自簽 HS256 JWT + RLS）。**切勿 revoke Legacy JWT Secret**，否則學員登入失效。
@@ -122,6 +122,7 @@
 | `/commander/leaderboard` | ✅ 排行榜 |
 | `/commander/stats` | ✅ 統計報表（週/月趨勢圖） |
 | `/commander/notifications` | ✅ 通知中心 |
+| `/commander/family` | ✅ 家庭與指揮官（邀請碼） |
 
 ### 學員 `/cadet/*`
 | 路由 | 狀態 |
@@ -191,6 +192,8 @@
 | `/api/commander/templates/[id]` | 常用任務 DELETE（admin client） | ✅ |
 | `/api/commander/notifications` | 指揮官通知 GET（列表+未讀）/PATCH（已讀） | ✅ |
 | `/api/cadet/notifications` | 學員通知 GET（列表+未讀）/PATCH（已讀） | ✅ |
+| `/api/commander/family` | 指揮官清單 + 邀請碼 GET/POST/DELETE | ✅ |
+| `/api/family/join` | 用邀請碼加入家庭（第二位家長） | ✅ |
 
 ---
 
@@ -212,7 +215,8 @@
 | notifications.spec.ts | 4 | ✅ |
 | shared-tasks.spec.ts | 2 | ✅ |
 | cadet-login.spec.ts | 3 | ✅ |
-| **合計** | **71** | **✅ 71/71** |
+| family-invite.spec.ts | 4 | ✅ |
+| **合計** | **75** | **✅ 75/75** |
 
 ---
 
@@ -241,17 +245,16 @@
 | 即時同步 Realtime（任務/留言/兌換即時出現） | §2.4 / §6.6 | 未實作，改走 API 讀取 | 大 / 高（需處理學員自簽 JWT 的 client 查詢，與現行 admin-API 架構衝突） |
 | 獎勵 / 頭像圖片上傳（Supabase Storage） | §2.2 / §3.3 / Phase 2 | 未實作，目前只有 emoji | 中 / 中（需先建 Storage bucket + 權限） |
 | 完成任務「星塵飛入」動畫 | §5.2 / Phase 3 | 未實作，目前只有 toast 提示 | 小 / 低（純前端；動畫較難做有意義 E2E） |
-| 多指揮官邀請 UI（父母雙方） | §3.2 | `family_members` 表已存在，無邀請介面 | 中 / 中 |
 | 多語系支援 | Phase 4 | 未實作（標低優先） | 中 / 低 |
 | 學員 PIN 獨立頁 `/login/cadet/pin` | §4.1 | PIN 目前內嵌於學員登入頁 | 小 / 低 |
 
-> 站內通知中心（原 Phase 3 缺口）已於 2026-06-14 補齊。
+> 站內通知中心（原 Phase 3 缺口）、多指揮官邀請碼（§3.2）已於 2026-06-14 補齊。
 
 ---
 
 ## 待上線前必做
 
-1. Supabase Dashboard 執行七個 migration SQL（`0001`–`0007`）
+1. Supabase Dashboard 執行八個 migration SQL（`0001`–`0008`）
 2. Vercel 環境變數設定（7 個金鑰，含 `CRON_SECRET`）
 3. 自訂網域 `starduty.app` DNS 設定
 4. PWA 圖示：目前 manifest 用 `public/icon.svg`；如需點陣圖示可另上傳 `icon-192/512.png`
@@ -293,5 +296,6 @@
 | 2026-06-14 | 開發工具：導入 CodeGraph（程式碼知識圖譜 MCP）— 全域安裝 + 本專案索引（92 檔 / 549 節點）；`.codegraph/` 加入 .gitignore；調整全域 CLAUDE.md 使用措辭。MCP 工具需完整重啟 Claude Code 才載入，shell 路徑即時可用（見「開發工具」段） |
 | 2026-06-14 | 新功能：站內通知中心（補 Phase 3 缺口）— `lib/notifications.ts` helper；完成待審任務/兌換→通知指揮官，核可/退回→通知學員；`/api/commander/notifications`、`/api/cadet/notifications`（GET 列表+未讀數、PATCH 已讀）；指揮官/學員 header 鈴鐺未讀徽章 + 通知頁。E2E notifications.spec.ts（含學員側）+ dev seed/cadet-token 端點 |
 | 2026-06-14 | E2E 測試基建強化：`_auth.ts` 加 commander session 快取（一個 worker 只產一次 magic link）+ 取不到 token 自動重試，根治 Supabase magic-link 限流 flakiness；新增 `loginAsCadet` helper（dev `/api/test/cadet-token` 簽學員 JWT）並補學員側通知 E2E；coins-adjustment 改用共用 `_auth`。全測試 66/66 穩定 |
+| 2026-06-14 | 新功能：多指揮官邀請碼（補 §3.2 缺口）— migration 0008 加 `families.invite_code`/`invite_expires_at`；指揮官首頁→「家庭與指揮官」頁可產生/複製/停用 8 碼邀請碼（7 天有效）+ 指揮官清單；signup 勾選「我有邀請碼」→ 輸入碼加入既有家庭（不新建）；`/api/commander/family` GET/POST/DELETE、`/api/family/join`。E2E family-invite.spec.ts 4/4（含拋棄式帳號真實加入全程）。全測試 75/75 |
 | 2026-06-14 | UX：學員登入 `KID-` 前綴改為固定顯示，只需輸入後 6 碼（貼上完整碼自動去前綴、小寫轉大寫、送出補回前綴）。E2E cadet-login.spec.ts 3/3 |
 | 2026-06-14 | 新功能：搶單制共用任務（先搶先得，只發一次）— migration 0007 加 `tasks.is_shared`／`task_completions.is_shared` + 部分唯一索引（同任務同日跨學員互斥）；改寫 `complete_task` RPC 加搶單分支（即時入帳、`already_claimed` 防重複）；任務表單「🏃 搶單」開關（僅所有學員）、列表徽章；學員端被搶走顯示「已被○○完成」灰掉。E2E shared-tasks.spec.ts 2/2（兩人搶只一人成功＋一般任務兩人都成功）。另修正 custom-templates 測試過度斷言（不再假設家庭無既有常用任務、刪除鎖定自己那筆）。全測試 68/68 |
