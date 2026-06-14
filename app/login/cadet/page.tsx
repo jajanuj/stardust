@@ -4,9 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveCadetSession } from "@/lib/cadetSession";
 
+// 只留後 6 碼：去掉 KID- 前綴、去掉非英數、轉大寫
+function normalizeKidSuffix(v: string): string {
+  return v.toUpperCase().replace(/^KID-?/, "").replace(/[^A-Z0-9]/g, "").slice(0, 6);
+}
+
 export default function CadetLogin() {
   const router = useRouter();
-  const [kidCode, setKidCode] = useState("");
+  const [suffix, setSuffix] = useState("");
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,7 +24,7 @@ export default function CadetLogin() {
       const res = await fetch("/api/kids/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kidCode, pin }),
+        body: JSON.stringify({ kidCode: `KID-${suffix}`, pin }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -47,16 +52,20 @@ export default function CadetLogin() {
       <form onSubmit={handleLogin} className="card flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm">
           KID 代碼
-          <input
-            value={kidCode}
-            onChange={(e) => setKidCode(e.target.value.toUpperCase())}
-            placeholder="KID-XXXXXX"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            className="rounded-lg border border-white/10 bg-space-700 px-4 py-3 tracking-widest"
-            required
-          />
+          <div className="flex items-center rounded-lg border border-white/10 bg-space-700 px-4 py-3 focus-within:border-stardust/50">
+            <span className="select-none font-mono font-bold tracking-widest text-stardust">KID-</span>
+            <input
+              value={suffix}
+              onChange={(e) => setSuffix(normalizeKidSuffix(e.target.value))}
+              placeholder="XXXXXX"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label="KID 代碼後六碼"
+              className="ml-1 w-full flex-1 bg-transparent tracking-widest outline-none placeholder:text-slate-500"
+              required
+            />
+          </div>
         </label>
         <label className="flex flex-col gap-1 text-sm">
           PIN（如果有設定）

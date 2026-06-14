@@ -211,7 +211,8 @@
 | custom-templates.spec.ts | 3 | ✅ |
 | notifications.spec.ts | 4 | ✅ |
 | shared-tasks.spec.ts | 2 | ✅ |
-| **合計** | **68** | **✅ 68/68** |
+| cadet-login.spec.ts | 3 | ✅ |
+| **合計** | **71** | **✅ 71/71** |
 
 ---
 
@@ -292,4 +293,5 @@
 | 2026-06-14 | 開發工具：導入 CodeGraph（程式碼知識圖譜 MCP）— 全域安裝 + 本專案索引（92 檔 / 549 節點）；`.codegraph/` 加入 .gitignore；調整全域 CLAUDE.md 使用措辭。MCP 工具需完整重啟 Claude Code 才載入，shell 路徑即時可用（見「開發工具」段） |
 | 2026-06-14 | 新功能：站內通知中心（補 Phase 3 缺口）— `lib/notifications.ts` helper；完成待審任務/兌換→通知指揮官，核可/退回→通知學員；`/api/commander/notifications`、`/api/cadet/notifications`（GET 列表+未讀數、PATCH 已讀）；指揮官/學員 header 鈴鐺未讀徽章 + 通知頁。E2E notifications.spec.ts（含學員側）+ dev seed/cadet-token 端點 |
 | 2026-06-14 | E2E 測試基建強化：`_auth.ts` 加 commander session 快取（一個 worker 只產一次 magic link）+ 取不到 token 自動重試，根治 Supabase magic-link 限流 flakiness；新增 `loginAsCadet` helper（dev `/api/test/cadet-token` 簽學員 JWT）並補學員側通知 E2E；coins-adjustment 改用共用 `_auth`。全測試 66/66 穩定 |
+| 2026-06-14 | UX：學員登入 `KID-` 前綴改為固定顯示，只需輸入後 6 碼（貼上完整碼自動去前綴、小寫轉大寫、送出補回前綴）。E2E cadet-login.spec.ts 3/3 |
 | 2026-06-14 | 新功能：搶單制共用任務（先搶先得，只發一次）— migration 0007 加 `tasks.is_shared`／`task_completions.is_shared` + 部分唯一索引（同任務同日跨學員互斥）；改寫 `complete_task` RPC 加搶單分支（即時入帳、`already_claimed` 防重複）；任務表單「🏃 搶單」開關（僅所有學員）、列表徽章；學員端被搶走顯示「已被○○完成」灰掉。E2E shared-tasks.spec.ts 2/2（兩人搶只一人成功＋一般任務兩人都成功）。另修正 custom-templates 測試過度斷言（不再假設家庭無既有常用任務、刪除鎖定自己那筆）。全測試 68/68 |
