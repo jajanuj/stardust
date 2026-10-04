@@ -3,7 +3,7 @@
 > 這是進度的單一真相來源(single source of truth)。每次交付一段功能/頁面/修正後固定更新此檔。
 > 設計細節見 [`StarDuty-plan.md`](./StarDuty-plan.md)。
 
-**最後更新：2026-06-14（站內通知中心完成）**
+**最後更新：2026-10-04（完成任務「星塵飛入」動畫）**
 **計畫版次：v0.5**
 
 ---
@@ -83,6 +83,7 @@
 - [x] 學員：寵物成長頁（`/cadet/pet`：5 階段進化、EXP 進度條）
 - [x] 學員：成就徽章頁（`/cadet/achievements`：8 成就定義）
 - [x] 學員：計時器（圓形動畫倒數）
+- [x] 完成任務「星塵飛入」動畫（`lib/stardustFly.ts`：星塵從任務按鈕弧線飛入餘額徽章 → 徽章跳動 + 浮出 +N；需審核任務不播放；尊重「減少動態效果」設定）
 - [x] 指揮官：留言板（`/commander/messages`：發送/刪除、指定學員/過期時間）
 - [x] 站內通知中心（`/commander/notifications`、`/cadet/notifications`）：header 鈴鐺未讀徽章 + 通知頁 + 全部已讀；完成待審/兌換→指揮官，核可/退回→學員自動建立通知
 - [x] PWA：`manifest.json`（standalone）+ `sw.js`（離線快取 + push 支援）
@@ -216,7 +217,8 @@
 | shared-tasks.spec.ts | 2 | ✅ |
 | cadet-login.spec.ts | 3 | ✅ |
 | family-invite.spec.ts | 4 | ✅ |
-| **合計** | **75** | **✅ 75/75** |
+| stardust-fly.spec.ts | 3 | ✅ |
+| **合計** | **78** | **✅ 78/78**（stardust-fly 為 2026-10-04 新增；其餘 75 項為 2026-06-14 本機結果） |
 
 ---
 
@@ -244,7 +246,7 @@
 |------|----------|------|----------------|
 | 即時同步 Realtime（任務/留言/兌換即時出現） | §2.4 / §6.6 | 未實作，改走 API 讀取 | 大 / 高（需處理學員自簽 JWT 的 client 查詢，與現行 admin-API 架構衝突） |
 | 獎勵 / 頭像圖片上傳（Supabase Storage） | §2.2 / §3.3 / Phase 2 | 未實作，目前只有 emoji | 中 / 中（需先建 Storage bucket + 權限） |
-| 完成任務「星塵飛入」動畫 | §5.2 / Phase 3 | 未實作，目前只有 toast 提示 | 小 / 低（純前端；動畫較難做有意義 E2E） |
+| ~~完成任務「星塵飛入」動畫~~ | §5.2 / Phase 3 | ✅ 2026-10-04 完成 | — |
 | 多語系支援 | Phase 4 | 未實作（標低優先） | 中 / 低 |
 | 學員 PIN 獨立頁 `/login/cadet/pin` | §4.1 | PIN 目前內嵌於學員登入頁 | 小 / 低 |
 
@@ -297,5 +299,19 @@
 | 2026-06-14 | 新功能：站內通知中心（補 Phase 3 缺口）— `lib/notifications.ts` helper；完成待審任務/兌換→通知指揮官，核可/退回→通知學員；`/api/commander/notifications`、`/api/cadet/notifications`（GET 列表+未讀數、PATCH 已讀）；指揮官/學員 header 鈴鐺未讀徽章 + 通知頁。E2E notifications.spec.ts（含學員側）+ dev seed/cadet-token 端點 |
 | 2026-06-14 | E2E 測試基建強化：`_auth.ts` 加 commander session 快取（一個 worker 只產一次 magic link）+ 取不到 token 自動重試，根治 Supabase magic-link 限流 flakiness；新增 `loginAsCadet` helper（dev `/api/test/cadet-token` 簽學員 JWT）並補學員側通知 E2E；coins-adjustment 改用共用 `_auth`。全測試 66/66 穩定 |
 | 2026-06-14 | 新功能：多指揮官邀請碼（補 §3.2 缺口）— migration 0008 加 `families.invite_code`/`invite_expires_at`；指揮官首頁→「家庭與指揮官」頁可產生/複製/停用 8 碼邀請碼（7 天有效）+ 指揮官清單；signup 勾選「我有邀請碼」→ 輸入碼加入既有家庭（不新建）；`/api/commander/family` GET/POST/DELETE、`/api/family/join`。E2E family-invite.spec.ts 4/4（含拋棄式帳號真實加入全程）。全測試 75/75 |
+| 2026-10-04 | 新功能：完成任務「星塵飛入」動畫（補 §5.2 / Phase 3 缺口）— `lib/stardustFly.ts`（純 DOM + Web Animations API，無新套件）；`/cadet/tasks` 完成即時入帳任務時星塵從按鈕飛入餘額徽章，抵達後才更新數字並浮出 +N；需審核任務不播放；`prefers-reduced-motion` 直接更新。E2E stardust-fly.spec.ts 3/3（以 page.route 攔截 API，不碰 Supabase） |
 | 2026-06-14 | UX：學員登入 `KID-` 前綴改為固定顯示，只需輸入後 6 碼（貼上完整碼自動去前綴、小寫轉大寫、送出補回前綴）。E2E cadet-login.spec.ts 3/3 |
 | 2026-06-14 | 新功能：搶單制共用任務（先搶先得，只發一次）— migration 0007 加 `tasks.is_shared`／`task_completions.is_shared` + 部分唯一索引（同任務同日跨學員互斥）；改寫 `complete_task` RPC 加搶單分支（即時入帳、`already_claimed` 防重複）；任務表單「🏃 搶單」開關（僅所有學員）、列表徽章；學員端被搶走顯示「已被○○完成」灰掉。E2E shared-tasks.spec.ts 2/2（兩人搶只一人成功＋一般任務兩人都成功）。另修正 custom-templates 測試過度斷言（不再假設家庭無既有常用任務、刪除鎖定自己那筆）。全測試 68/68 |
+
+---
+
+## ⚠️ 遇到的問題（2026-10-04 雲端 session）
+
+- 雲端環境沒有 `.env.local` 和 Supabase 金鑰，連真實資料庫的既有 75 項 E2E **這次無法重跑**；新的 stardust-fly 測試用 API 攔截，所以可以跑。若要在雲端跑完整測試，需在雲端環境設定加入 4 個 Supabase 環境變數（建議用獨立的測試專案，避免污染正式資料）。
+- 雲端預裝的 Chromium 版本（1194）和專案的 Playwright 版本不一致。這次另用暫存設定指定 `executablePath: /opt/pw-browsers/chromium` 執行，沒有修改 repo 的 `playwright.config.ts`；本機執行不受影響。
+
+## ⏳ 下一步候選
+
+- B. 學員 PIN 獨立頁 `/login/cadet/pin`（§4.1）
+- 指揮官「忘記密碼 / 重設密碼」頁（老闆 2026-10-04 提出需求，尚未排入）
+- C. 獎勵/頭像圖片上傳、D. Realtime 即時同步、E. 多語系

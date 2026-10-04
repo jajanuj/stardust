@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getCadetToken, getCadetInfo, saveCadetSession } from "@/lib/cadetSession";
+import { flyStardust } from "@/lib/stardustFly";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -34,6 +35,7 @@ export default function CadetTasksPage() {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "info" | "error" } | null>(null);
+  const coinRef = useRef<HTMLDivElement>(null);
 
   const todayStr = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
   const todayDay = new Date().getDay();
@@ -100,7 +102,7 @@ export default function CadetTasksPage() {
     return true;
   }
 
-  async function completeTask(taskId: string) {
+  async function completeTask(taskId: string, origin?: HTMLElement) {
     if (!childId || completing) return;
     const token = getCadetToken();
     if (!token) { router.replace("/login/cadet"); return; }
@@ -134,12 +136,16 @@ export default function CadetTasksPage() {
     if (result.status === "pending") {
       showToast("✅ 已回報！等待指揮官審核中…", "info");
     } else {
-      setCoins(result.balance);
       // 同步更新 localStorage 內的 coins
       const info = getCadetInfo();
       if (info) saveCadetSession(getCadetToken()!, { ...info, coins: result.balance });
-      const reward = tasks.find((t) => t.id === taskId)?.coins_reward ?? "";
+      const reward = tasks.find((t) => t.id === taskId)?.coins_reward ?? 0;
       showToast(result.shared ? `🏃 搶到了！+${reward} 星塵！` : `🌟 +${reward} 星塵！`, "success");
+      // 星塵飛入動畫：抵達餘額徽章後才更新數字
+      if (origin && coinRef.current) {
+        await flyStardust(origin, coinRef.current, reward);
+      }
+      setCoins(result.balance);
     }
     load();
   }
@@ -164,7 +170,7 @@ export default function CadetTasksPage() {
 
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">我的任務 📋</h1>
-        <div className="flex items-center gap-1 rounded-xl bg-space-800 px-3 py-1.5">
+        <div ref={coinRef} data-testid="coin-balance" className="flex items-center gap-1 rounded-xl bg-space-800 px-3 py-1.5">
           <span className="text-stardust">⭐</span>
           <span className="font-bold text-stardust">{coins}</span>
           <span className="text-xs text-slate-400">星塵</span>
@@ -189,7 +195,7 @@ export default function CadetTasksPage() {
                 task={task}
                 done={false}
                 completing={completing === task.id}
-                onComplete={() => completeTask(task.id)}
+                onComplete={(el) => completeTask(task.id, el)}
               />
             ))}
           </div>
@@ -225,7 +231,7 @@ function TaskCard({ task, done, isPending, claimedLabel, completing, onComplete 
   isPending?: boolean;
   claimedLabel?: string;
   completing: boolean;
-  onComplete?: () => void;
+  onComplete?: (origin: HTMLElement) => void;
 }) {
   return (
     <div className={`card flex items-center gap-3 transition ${done ? "opacity-60" : "border-white/10 hover:border-nebula-purple/40"}`}>
@@ -247,7 +253,7 @@ function TaskCard({ task, done, isPending, claimedLabel, completing, onComplete 
       </div>
       {!done && (
         <button
-          onClick={onComplete}
+          onClick={(e) => onComplete?.(e.currentTarget)}
           disabled={completing}
           className={`flex h-10 w-10 items-center justify-center rounded-full text-xl transition ${
             completing ? "animate-pulse bg-space-700" : "bg-nebula-purple/20 hover:bg-nebula-purple/40 active:scale-90"
