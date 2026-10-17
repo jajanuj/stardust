@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { BASE as AUTH_BASE, loginAsCommander } from "./_auth";
 
 const BASE = "http://localhost:3001";
 
@@ -20,11 +21,12 @@ test("指揮官 layout 有底部導航列", async ({ page }) => {
 });
 
 test("點擊底部導航學員連結前往 /commander/cadets", async ({ page }) => {
-  await page.goto(`${BASE}/commander`);
+  // 已登入才不會與「未登入導向」競速
+  await loginAsCommander(page, "/commander");
   // 底部導航中的「學員」連結
   const cadetLink = page.locator("nav").getByText("學員");
   await cadetLink.click();
-  await expect(page).toHaveURL(`${BASE}/commander/cadets`);
+  await expect(page).toHaveURL(`${AUTH_BASE}/commander/cadets`);
 });
 
 test("/commander/cadets 頁面結構正確", async ({ page }) => {

@@ -203,11 +203,11 @@
 | 測試檔 | 測試數 | 狀態 |
 |--------|--------|------|
 | signup.spec.ts | 5 | ✅ |
-| cadets.spec.ts | 5 | ⚠️ 4/5（「點擊底部導航學員連結」失敗） |
+| cadets.spec.ts | 5 | ✅ |
 | tasks.spec.ts | 6 | ✅ |
-| cadet-tasks.spec.ts | 6 | ⚠️ 5/6（「學員登入頁有 KID 輸入框」失敗） |
+| cadet-tasks.spec.ts | 6 | ✅ |
 | approvals.spec.ts | 5 | ✅ |
-| phase2.spec.ts | 9 | ⚠️ 8/9（「wishlist/toggle 缺少參數回傳 400」失敗） |
+| phase2.spec.ts | 9 | ✅ |
 | phase3.spec.ts | 8 | ✅ |
 | phase4.spec.ts | 6 | ✅ |
 | templates.spec.ts | 3 | ✅ |
@@ -218,7 +218,7 @@
 | cadet-login.spec.ts | 3 | ✅ |
 | family-invite.spec.ts | 4 | ✅ |
 | stardust-fly.spec.ts | 3 | ✅ |
-| **合計** | **78** | **⚠️ 75/78**（2026-10-17 雲端完整執行；失敗 3 項原因見下方「遇到的問題」） |
+| **合計** | **78** | **✅ 78/78**（2026-10-17 雲端完整執行，修正 3 項過時／不穩測試後全過） |
 
 ---
 
@@ -303,22 +303,18 @@
 | 2026-06-14 | UX：學員登入 `KID-` 前綴改為固定顯示，只需輸入後 6 碼（貼上完整碼自動去前綴、小寫轉大寫、送出補回前綴）。E2E cadet-login.spec.ts 3/3 |
 | 2026-06-14 | 新功能：搶單制共用任務（先搶先得，只發一次）— migration 0007 加 `tasks.is_shared`／`task_completions.is_shared` + 部分唯一索引（同任務同日跨學員互斥）；改寫 `complete_task` RPC 加搶單分支（即時入帳、`already_claimed` 防重複）；任務表單「🏃 搶單」開關（僅所有學員）、列表徽章；學員端被搶走顯示「已被○○完成」灰掉。E2E shared-tasks.spec.ts 2/2（兩人搶只一人成功＋一般任務兩人都成功）。另修正 custom-templates 測試過度斷言（不再假設家庭無既有常用任務、刪除鎖定自己那筆）。全測試 68/68 |
 | 2026-10-17 | 雲端環境完整 E2E：78 項中 75 通過、3 失敗（皆為測試過時／競速，非功能壞掉）；`tsc` 有 1 個測試檔型別錯誤（stardust-fly reducedMotion）。釐清雙 dev server 共用 `.next` 的雲端執行注意事項 |
+| 2026-10-17 | 測試修正：cadet-tasks／phase2／cadets／stardust-fly 4 處過時或不穩測試更新，`tsc` 零錯誤，雲端完整 E2E 78/78 通過 |
 
 ---
 
-## ⚠️ 遇到的問題（2026-10-17 雲端 E2E 完整執行：75/78）
+## ⚠️ 遇到的問題（2026-10-17 雲端 E2E）
 
-已解決（2026-10-04 記載的兩項）：雲端環境已設定 4 個 Supabase 環境變數與網路白名單；Chromium 版本不符以 scratchpad 暫存 config 指定 `executablePath: /opt/pw-browsers/chromium` 解決，repo 的 `playwright.config.ts` 未修改。
+已解決：
+- 雲端環境變數、網路白名單、Chromium 版本不符（用 scratchpad 暫存 config 指定 `executablePath`，repo 的 `playwright.config.ts` 未改）。
+- 先前 3 項失敗測試已修正（只改測試，未動功能）：`cadet-tasks` KID 輸入框改用 aria-label；`phase2` wishlist/toggle 未帶授權預期改為 401；`cadets` 導覽點擊改為先登入以避開導向競速。
+- `stardust-fly` 的 `reducedMotion` 改放 `contextOptions`，`tsc --noEmit` 零錯誤，且該項現在真正啟用 reduce。
 
-**雲端執行注意**：3000、3001 兩個 `next dev` 若在同一個目錄啟動會共用 `.next`，互相蓋掉編譯產物（出現 `.next/cache` ENOENT、`/api/test/auth-link` 404、`page.goto ERR_ABORTED`），第一次因此 12 項失敗。雲端做法：3001 改在 scratchpad 的專案副本（node_modules 用 symlink）執行，各自獨立 `.next`，重跑後剩 3 項失敗。
-
-**仍失敗的 3 項（尚未修，等老闆決定；皆未改測試、未跳過）**
-
-1. `cadet-tasks.spec.ts:38`「學員登入頁有 KID 輸入框」— 測試用 `getByPlaceholder(/KID/i)`，但 commit ad67c40 把 `KID-` 改為固定前綴、輸入框 placeholder 變成 `XXXXXX`，測試沒跟著更新（測試過時）。
-2. `phase2.spec.ts:51`「/api/wishlist/toggle POST 缺少參數回傳 400」— 該路由現在先做 `verifyCadet`，未帶 token 回 401；測試仍預期 400（測試過時，401 才是正確行為）。
-3. `cadets.spec.ts:22`「點擊底部導航學員連結前往 /commander/cadets」— 未登入進 `/commander` 會被導向 `/login/commander`，點擊與導向競速；推測原因是雲端網路延遲讓導向時機和本機不同（測試本身依賴競速，屬不穩定測試）。尚未在本機驗證。
-
-另：`stardust-fly.spec.ts:84` 的 `test.use({ reducedMotion: "reduce" })` 在 Playwright 1.60 型別中不存在（`npx tsc --noEmit` 報 TS2353），執行時選項被忽略，「減少動態效果」那項實際沒有啟用 reduce（需改放 `contextOptions`）。該項雖然通過，但沒有驗到想驗的情境。
+**雲端執行注意**：3000、3001 兩個 `next dev` 不可共用同一個 `.next`（會出現 `.next/cache` ENOENT、`/api/test/auth-link` 404、`ERR_ABORTED`）。雲端做法：3001 改在專案副本（node_modules 用 symlink）執行，各自獨立 `.next`。
 
 ## ⏳ 下一步候選
 

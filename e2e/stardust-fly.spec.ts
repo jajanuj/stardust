@@ -81,7 +81,7 @@ test("需審核任務：不播放星塵動畫，餘額不變", async ({ page }) 
 });
 
 test.describe("減少動態效果", () => {
-  test.use({ reducedMotion: "reduce" });
+  test.use({ contextOptions: { reducedMotion: "reduce" } });
 
   test("偏好減少動態時跳過動畫，餘額直接更新", async ({ page }) => {
     await setup(page, "approved");

@@ -48,12 +48,12 @@ test("/api/rewards/fulfill POST 缺少參數回傳 400", async ({ page }) => {
   expect(res.status()).toBe(400);
 });
 
-test("/api/wishlist/toggle POST 缺少參數回傳 400", async ({ page }) => {
+test("/api/wishlist/toggle POST 未帶學員授權回傳 401", async ({ page }) => {
   const res = await page.request.post(`${BASE}/api/wishlist/toggle`, {
     data: {},
     headers: { "Content-Type": "application/json" },
   });
-  expect(res.status()).toBe(400);
+  expect(res.status()).toBe(401);
 });
 
 test("學員 layout 底部有商城和心願連結", async ({ page }) => {

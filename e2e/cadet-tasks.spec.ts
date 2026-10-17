@@ -37,5 +37,6 @@ test("cadet layout 底部導航有五個頁籤", async ({ page }) => {
 
 test("學員登入頁有 KID 輸入框", async ({ page }) => {
   await page.goto(`${BASE}/login/cadet`);
-  await expect(page.getByPlaceholder(/KID/i)).toBeVisible();
+  // KID- 為固定前綴，輸入框只填後 6 碼（aria-label「KID 代碼後六碼」）
+  await expect(page.getByLabel("KID 代碼後六碼")).toBeVisible();
 });
