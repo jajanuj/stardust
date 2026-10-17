@@ -203,11 +203,11 @@
 | 測試檔 | 測試數 | 狀態 |
 |--------|--------|------|
 | signup.spec.ts | 5 | ✅ |
-| cadets.spec.ts | 5 | ✅ |
+| cadets.spec.ts | 5 | ⚠️ 4/5（「點擊底部導航學員連結」失敗） |
 | tasks.spec.ts | 6 | ✅ |
-| cadet-tasks.spec.ts | 6 | ✅ |
+| cadet-tasks.spec.ts | 6 | ⚠️ 5/6（「學員登入頁有 KID 輸入框」失敗） |
 | approvals.spec.ts | 5 | ✅ |
-| phase2.spec.ts | 9 | ✅ |
+| phase2.spec.ts | 9 | ⚠️ 8/9（「wishlist/toggle 缺少參數回傳 400」失敗） |
 | phase3.spec.ts | 8 | ✅ |
 | phase4.spec.ts | 6 | ✅ |
 | templates.spec.ts | 3 | ✅ |
@@ -218,7 +218,7 @@
 | cadet-login.spec.ts | 3 | ✅ |
 | family-invite.spec.ts | 4 | ✅ |
 | stardust-fly.spec.ts | 3 | ✅ |
-| **合計** | **78** | **✅ 78/78**（stardust-fly 為 2026-10-04 新增；其餘 75 項為 2026-06-14 本機結果） |
+| **合計** | **78** | **⚠️ 75/78**（2026-10-17 雲端完整執行；失敗 3 項原因見下方「遇到的問題」） |
 
 ---
 
@@ -302,13 +302,23 @@
 | 2026-10-04 | 新功能：完成任務「星塵飛入」動畫（補 §5.2 / Phase 3 缺口）— `lib/stardustFly.ts`（純 DOM + Web Animations API，無新套件）；`/cadet/tasks` 完成即時入帳任務時星塵從按鈕飛入餘額徽章，抵達後才更新數字並浮出 +N；需審核任務不播放；`prefers-reduced-motion` 直接更新。E2E stardust-fly.spec.ts 3/3（以 page.route 攔截 API，不碰 Supabase） |
 | 2026-06-14 | UX：學員登入 `KID-` 前綴改為固定顯示，只需輸入後 6 碼（貼上完整碼自動去前綴、小寫轉大寫、送出補回前綴）。E2E cadet-login.spec.ts 3/3 |
 | 2026-06-14 | 新功能：搶單制共用任務（先搶先得，只發一次）— migration 0007 加 `tasks.is_shared`／`task_completions.is_shared` + 部分唯一索引（同任務同日跨學員互斥）；改寫 `complete_task` RPC 加搶單分支（即時入帳、`already_claimed` 防重複）；任務表單「🏃 搶單」開關（僅所有學員）、列表徽章；學員端被搶走顯示「已被○○完成」灰掉。E2E shared-tasks.spec.ts 2/2（兩人搶只一人成功＋一般任務兩人都成功）。另修正 custom-templates 測試過度斷言（不再假設家庭無既有常用任務、刪除鎖定自己那筆）。全測試 68/68 |
+| 2026-10-17 | 雲端環境完整 E2E：78 項中 75 通過、3 失敗（皆為測試過時／競速，非功能壞掉）；`tsc` 有 1 個測試檔型別錯誤（stardust-fly reducedMotion）。釐清雙 dev server 共用 `.next` 的雲端執行注意事項 |
 
 ---
 
-## ⚠️ 遇到的問題（2026-10-04 雲端 session）
+## ⚠️ 遇到的問題（2026-10-17 雲端 E2E 完整執行：75/78）
 
-- 雲端環境沒有 `.env.local` 和 Supabase 金鑰，連真實資料庫的既有 75 項 E2E **這次無法重跑**；新的 stardust-fly 測試用 API 攔截，所以可以跑。若要在雲端跑完整測試，需在雲端環境設定加入 4 個 Supabase 環境變數（建議用獨立的測試專案，避免污染正式資料）。
-- 雲端預裝的 Chromium 版本（1194）和專案的 Playwright 版本不一致。這次另用暫存設定指定 `executablePath: /opt/pw-browsers/chromium` 執行，沒有修改 repo 的 `playwright.config.ts`；本機執行不受影響。
+已解決（2026-10-04 記載的兩項）：雲端環境已設定 4 個 Supabase 環境變數與網路白名單；Chromium 版本不符以 scratchpad 暫存 config 指定 `executablePath: /opt/pw-browsers/chromium` 解決，repo 的 `playwright.config.ts` 未修改。
+
+**雲端執行注意**：3000、3001 兩個 `next dev` 若在同一個目錄啟動會共用 `.next`，互相蓋掉編譯產物（出現 `.next/cache` ENOENT、`/api/test/auth-link` 404、`page.goto ERR_ABORTED`），第一次因此 12 項失敗。雲端做法：3001 改在 scratchpad 的專案副本（node_modules 用 symlink）執行，各自獨立 `.next`，重跑後剩 3 項失敗。
+
+**仍失敗的 3 項（尚未修，等老闆決定；皆未改測試、未跳過）**
+
+1. `cadet-tasks.spec.ts:38`「學員登入頁有 KID 輸入框」— 測試用 `getByPlaceholder(/KID/i)`，但 commit ad67c40 把 `KID-` 改為固定前綴、輸入框 placeholder 變成 `XXXXXX`，測試沒跟著更新（測試過時）。
+2. `phase2.spec.ts:51`「/api/wishlist/toggle POST 缺少參數回傳 400」— 該路由現在先做 `verifyCadet`，未帶 token 回 401；測試仍預期 400（測試過時，401 才是正確行為）。
+3. `cadets.spec.ts:22`「點擊底部導航學員連結前往 /commander/cadets」— 未登入進 `/commander` 會被導向 `/login/commander`，點擊與導向競速；推測原因是雲端網路延遲讓導向時機和本機不同（測試本身依賴競速，屬不穩定測試）。尚未在本機驗證。
+
+另：`stardust-fly.spec.ts:84` 的 `test.use({ reducedMotion: "reduce" })` 在 Playwright 1.60 型別中不存在（`npx tsc --noEmit` 報 TS2353），執行時選項被忽略，「減少動態效果」那項實際沒有啟用 reduce（需改放 `contextOptions`）。該項雖然通過，但沒有驗到想驗的情境。
 
 ## ⏳ 下一步候選
 
